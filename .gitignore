@@ -1,0 +1,16 @@
+# 编译产物
+build/
+*.pdb
+*.user
+*.suo
+.vs/
+
+# 采集输出与测试临时目录
+test-out/
+output/
+*.log
+
+# Python 缓存（仅用于生成文档）
+__pycache__/
+*.pyc
+.dsh-office-*/

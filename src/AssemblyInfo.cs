@@ -4,5 +4,5 @@ using System.Reflection;
 [assembly: AssemblyDescription("Windows 笔记本测试日志采集与报告工具")]
 [assembly: AssemblyProduct("LogCollector")]
 [assembly: AssemblyCompany("")]
-[assembly: AssemblyVersion("1.1.0.0")]
-[assembly: AssemblyFileVersion("1.1.0.0")]
+[assembly: AssemblyVersion("1.2.0.0")]
+[assembly: AssemblyFileVersion("1.2.0.0")]

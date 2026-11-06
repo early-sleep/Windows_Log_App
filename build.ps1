@@ -15,7 +15,7 @@ if (-not (Test-Path $csc)) { throw '找不到 csc.exe，请确认已安装 .NET 
 
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-$files = @('Core.cs', 'Jobs.cs', 'Report.cs', 'MainForm.cs', 'Program.cs', 'AssemblyInfo.cs') |
+$files = @('Core.cs', 'Jobs.cs', 'Report.cs', 'HtmlPreview.cs', 'MainForm.cs', 'Program.cs', 'AssemblyInfo.cs') |
     ForEach-Object { Join-Path $src $_ }
 
 $args = @(

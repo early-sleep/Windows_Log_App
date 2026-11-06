@@ -129,6 +129,12 @@ namespace LogCollector
 
             DateTime end = DateTime.Now;
 
+            // 浏览页：每个子目录一份，根目录一份汇总
+            s.Step(total, "生成 HTML 浏览页");
+            try { HtmlPreview.BuildAll(s); }
+            catch (Exception ex) { s.Log("生成浏览页失败：" + ex.Message); }
+            s.StepDone(total);
+
             // 报告与说明
             s.Step(total, "生成 HTML 报告");
             try
@@ -181,18 +187,19 @@ namespace LogCollector
             b.AppendLine();
             b.AppendLine("查看方式");
             b.AppendLine("----------------------------------------");
-            b.AppendLine("1. 先打开 report.html，看「关键发现」与「事件时间线」；");
-            b.AppendLine("2. 蓝屏问题：用 WinDbg 打开 30_崩溃转储 下的 .dmp 文件；");
-            b.AppendLine("3. 事件日志：双击 10_系统日志/System.evtx 可用事件查看器直接打开；");
-            b.AppendLine("4. 电池问题：打开 40_电源电池/电池报告.html；");
-            b.AppendLine("5. 无线问题：打开 71_无线报告/无线历史报告.html。");
+            b.AppendLine("1. 先打开 report.html，看「关键发现」「电源与睡眠设置」与「事件时间线」；");
+            b.AppendLine("2. 想看所有文本内容：打开 全部内容.html（每个子目录也有 浏览.html）；");
+            b.AppendLine("3. 蓝屏问题：用 WinDbg 打开 30_崩溃转储 下的 .dmp 文件；");
+            b.AppendLine("4. 事件日志：双击 10_系统日志/System.evtx 可用事件查看器直接打开；");
+            b.AppendLine("5. 电池问题：打开 40_电源电池/电池报告.html；");
+            b.AppendLine("6. 电源设置：见 41_电源设置/电源设置.txt（睡眠/休眠/关屏超时、合盖动作）。");
             return b.ToString();
         }
     }
 
     static class Program
     {
-        public const string Version = "1.1";
+        public const string Version = "1.2";
 
         [STAThread]
         static int Main(string[] args)

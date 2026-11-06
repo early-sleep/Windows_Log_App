@@ -163,6 +163,12 @@ namespace LogCollector
             if (bat.Length > 0)
                 b.Append("<div class=\"card\"><div class=\"card-t\">电池与电源</div>").Append(bat).Append("</div>");
 
+            // ---------- 电源与睡眠设置 ----------
+            string pwr = PowerBlock(s);
+            if (pwr.Length > 0)
+                b.Append("<div class=\"card\"><div class=\"card-t\">电源与睡眠设置 <span class=\"hint\">当前电源方案，单位见括号</span></div>")
+                 .Append(pwr).Append("</div>");
+
             // ---------- 文件清单 ----------
             b.Append("<div class=\"card\"><div class=\"card-t\">采集文件清单</div><table class=\"tl\">");
             b.Append("<thead><tr><th style=\"width:300px\">目录 / 文件</th><th style=\"width:100px\">体积</th><th>说明</th></tr></thead><tbody>");
@@ -171,19 +177,48 @@ namespace LogCollector
                 foreach (string d in Directory.GetDirectories(s.OutDir))
                 {
                     string name = Path.GetFileName(d);
-                    b.Append("<tr><td class=\"mono\">").Append(H(name)).Append("/</td><td class=\"mono\">")
+                    bool hasPage = File.Exists(Path.Combine(d, "浏览.html"));
+                    b.Append("<tr><td class=\"mono\">");
+                    if (hasPage) b.Append("<a href=\"").Append(H(name)).Append("/浏览.html\">").Append(H(name)).Append("/</a>");
+                    else b.Append(H(name)).Append("/");
+                    b.Append("</td><td class=\"mono\">")
                      .Append(Tool.FmtSize(Tool.DirSize(d))).Append("</td><td class=\"msg\">")
                      .Append(H(Explain(name))).Append("</td></tr>");
                 }
             }
             catch { }
-            b.Append("</tbody></table></div>");
+            b.Append("</tbody></table>");
+            b.Append("<div class=\"msg\" style=\"margin-top:8px\">所有文本类文件已汇总到 <a href=\"全部内容.html\">全部内容.html</a>，可在浏览器里直接查看，也可按目录单独打开。</div>");
+            b.Append("</div>");
 
             // ---------- 页脚 ----------
             b.Append("<div class=\"ft\">本报告由笔记本日志采集工具 v" + H(Program.Version) + " 生成，内容为采集到的原始事实，不含推断性结论。");
             b.Append("原始文件位于同目录下，可用事件查看器直接打开 <code>System.evtx</code> 与 <code>Application.evtx</code>。");
             b.Append("报告可能包含个人信息，请按公司数据分级要求流转。</div>");
             b.Append("</div></body></html>");
+            return b.ToString();
+        }
+
+        private static string PowerBlock(Session s)
+        {
+            bool any = false;
+            StringBuilder b = new StringBuilder();
+            b.Append("<table class=\"tl\"><thead><tr><th style=\"width:240px\">项目</th>")
+             .Append("<th style=\"width:170px\">交流（插电）</th><th>电池供电</th></tr></thead><tbody>");
+            foreach (string[] item in Jobs.PowerItems)
+            {
+                string k = "PWR." + item[0] + "_ac";
+                if (!s.Probe.ContainsKey(k)) continue;
+                any = true;
+                string v = s.Probe[k];
+                string d;
+                s.Probe.TryGetValue("PWR." + item[0] + "_dc", out d);
+                b.Append("<tr><td>").Append(H(item[1])).Append("</td><td class=\"mono\">")
+                 .Append(H(v)).Append("</td><td class=\"mono\">").Append(H(d)).Append("</td></tr>");
+            }
+            b.Append("</tbody></table>");
+            if (!any) return "";
+            b.Append("<div class=\"msg\" style=\"margin-top:6px\">睡眠 / 休眠 / 关屏为“无操作后经过多少时间触发”；「从不」表示不会自动触发。</div>");
             return b.ToString();
         }
 

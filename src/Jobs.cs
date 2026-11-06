@@ -321,6 +321,12 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             string src = @"C:\Windows\Minidump";
             int n = 0;
             long bytes = 0;
+            List<string> skipped = new List<string>();
+            long free = 0;
+            try { free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dir))).AvailableFreeSpace; }
+            catch { }
+            const long Reserve = 2L * 1024 * 1024 * 1024;   // 目标盘至少留 2GB
+
             if (Directory.Exists(src))
             {
                 List<FileInfo> files = new List<FileInfo>();
@@ -333,23 +339,49 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 for (int i = 0; i < max; i++)
                 {
                     if (s.Token.IsCancellationRequested) return;
+                    FileInfo fi = files[i];
+                    if (free > 0 && fi.Length + Reserve > free)
+                    {
+                        skipped.Add(fi.FullName + "（" + Tool.FmtSize(fi.Length) + "，目标盘剩余空间不足）");
+                        s.Log("  · 空间不足，未复制 " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "）");
+                        continue;
+                    }
+                    if (fi.Length > 2L * 1024 * 1024 * 1024)
+                        s.Log("  · 正在复制大文件 " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "），可能需要几分钟…");
                     try
                     {
-                        string dst = Path.Combine(dir, files[i].Name);
-                        File.Copy(files[i].FullName, dst, true);
-                        bytes += files[i].Length;
+                        string dst = Path.Combine(dir, fi.Name);
+                        File.Copy(fi.FullName, dst, true);
+                        bytes += fi.Length;
+                        free -= fi.Length;
                         n++;
                     }
-                    catch { }
+                    catch (Exception ex)
+                    {
+                        skipped.Add(fi.FullName + "（复制失败：" + ex.Message + "）");
+                    }
                 }
             }
+
+            if (skipped.Count > 0)
+            {
+                StringBuilder note = new StringBuilder();
+                note.AppendLine("以下转储文件没有复制到采集包中，原始文件仍在系统里，需要时可手工复制：");
+                foreach (string t in skipped) note.AppendLine("  " + t);
+                File.WriteAllText(Path.Combine(dir, "未复制的大文件.txt"), note.ToString(), new UTF8Encoding(true));
+            }
+
             if (n == 0)
             {
-                WriteNothing(dir, "本次没有找到蓝屏小型转储文件。\r\n\r\n" + DumpPolicy());
-                s.Log("  · 未找到 Minidump");
-                throw new SkippedException("系统里没有蓝屏转储文件（" + DumpModeName() + "，近 30 天无蓝屏记录）。详见 30_崩溃转储\\说明.txt");
+                string reason = skipped.Count > 0
+                    ? "转储文件过大或复制失败，未复制（详见 30_崩溃转储\\未复制的大文件.txt）"
+                    : "系统里没有蓝屏转储文件（" + DumpModeName() + "，近 30 天无蓝屏记录）";
+                if (skipped.Count == 0) WriteNothing(dir, "本次没有找到蓝屏小型转储文件。\r\n\r\n" + DumpPolicy());
+                s.Log("  · 未复制任何转储文件");
+                throw new SkippedException(reason);
             }
-            s.Log("  · 已复制 " + n + " 个转储文件，" + Tool.FmtSize(bytes));
+            s.Log("  · 已复制 " + n + " 个转储文件，" + Tool.FmtSize(bytes)
+                  + (skipped.Count > 0 ? "（另有 " + skipped.Count + " 个未复制）" : ""));
         }
 
         /// <summary>读取当前系统的转储设置，返回可读说明。</summary>
@@ -635,6 +667,117 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 sb.AppendLine();
             }
             File.WriteAllText(Path.Combine(dir, "电源与唤醒.txt"), sb.ToString(), new UTF8Encoding(true));
+            CollectPowerSettings(s, dir);
+        }
+
+        /// <summary>需要抓取的电源设置：键、中文名、子组、设置、取值类型。</summary>
+        public static readonly string[][] PowerItems = new string[][] {
+            new string[] { "sleep",     "睡眠超时（无操作后进入睡眠）", "SUB_SLEEP",   "STANDBYIDLE",   "time" },
+            new string[] { "hibernate", "休眠超时（无操作后进入休眠）", "SUB_SLEEP",   "HIBERNATEIDLE", "time" },
+            new string[] { "monitor",   "关闭显示器",                 "SUB_VIDEO",   "VIDEOIDLE",     "time" },
+            new string[] { "disk",      "关闭硬盘",                   "SUB_DISK",    "DISKIDLE",      "time" },
+            new string[] { "unattend",  "无人参与系统睡眠",           "SUB_SLEEP",   "UNATTENDSLEEP", "time" },
+            new string[] { "lid",       "合上盖子时",                 "SUB_BUTTONS", "LIDACTION",     "action" },
+            new string[] { "powerbtn",  "按电源按钮时",               "SUB_BUTTONS", "PBUTTONACTION", "action" },
+            new string[] { "hybrid",    "混合睡眠",                   "SUB_SLEEP",   "HYBRIDSLEEP",   "bool" }
+        };
+
+        private static void CollectPowerSettings(Session s, string dir)
+        {
+            StringBuilder sb = new StringBuilder();
+            sb.AppendLine("=== 电源与睡眠超时设置 ===");
+            sb.AppendLine("（交流 = 插电源，直流 = 电池供电；数值为系统当前生效值）");
+            sb.AppendLine();
+            sb.AppendLine(Pad("项目", 30) + Pad("交流(AC)", 24) + Pad("电池(DC)", 24) + "原始值");
+            sb.AppendLine(new string('-', 92));
+
+            StringBuilder csv = new StringBuilder();
+            csv.AppendLine("项目,交流AC,电池DC,交流原始值,电池原始值");
+
+            foreach (string[] item in PowerItems)
+            {
+                if (s.Token.IsCancellationRequested) return;
+                string key = item[0], name = item[1], sub = item[2], setting = item[3], kind = item[4];
+                string outp;
+                Tool.Run("powercfg.exe", "/qh SCHEME_CURRENT " + sub + " " + setting, 30000, s.Token, out outp, Encoding.Default);
+                long ac, dc;
+                if (!ParseIndices(outp, out ac, out dc)) continue;
+
+                string sa = FormatValue(ac, kind);
+                string sd = FormatValue(dc, kind);
+                s.Probe["PWR." + key + "_ac"] = sa;
+                s.Probe["PWR." + key + "_dc"] = sd;
+                s.Probe["PWR." + key + "_acraw"] = ac.ToString();
+                s.Probe["PWR." + key + "_dcraw"] = dc.ToString();
+
+                sb.AppendLine(Pad(name, 30) + Pad(sa, 24) + Pad(sd, 24) + ac + "/" + dc);
+                csv.AppendLine(name + "," + sa + "," + sd + "," + ac + "," + dc);
+            }
+
+            sb.AppendLine();
+            sb.AppendLine("原始值说明：时间类单位为秒，0 或 4294967295 表示“从不”；");
+            sb.AppendLine("动作类 0=不采取任何操作 1=睡眠 2=休眠 3=关机 4=关闭显示器；布尔类 0=关闭 1=开启。");
+
+            File.WriteAllText(Path.Combine(dir, "电源设置.txt"), sb.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "电源设置.csv"), csv.ToString(), new UTF8Encoding(true));
+
+            StringBuilder sum = new StringBuilder();
+            sum.AppendLine("=== 电源与睡眠超时（当前电源方案） ===");
+            foreach (string[] item in PowerItems)
+            {
+                string k = "PWR." + item[0] + "_ac";
+                if (!s.Probe.ContainsKey(k)) continue;
+                sum.AppendLine("  " + item[1] + "：交流 " + s.Probe[k] + " / 电池 " + s.Probe["PWR." + item[0] + "_dc"]);
+            }
+            s.Log(sum.ToString().TrimEnd());
+        }
+
+        /// <summary>从 powercfg /query 输出中取出最后两个十六进制值（交流、直流）。</summary>
+        private static bool ParseIndices(string text, out long ac, out long dc)
+        {
+            ac = dc = 0;
+            MatchCollection ms = Regex.Matches(text, "0x([0-9A-Fa-f]{8})");
+            if (ms.Count < 2) return false;
+            long a, d;
+            if (!long.TryParse(ms[ms.Count - 2].Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out a)) return false;
+            if (!long.TryParse(ms[ms.Count - 1].Groups[1].Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out d)) return false;
+            ac = a; dc = d;
+            return true;
+        }
+
+        /// <summary>按显示宽度补空格（中文算 2 列），保证 txt 里的表格对齐。</summary>
+        private static string Pad(string text, int width)
+        {
+            int w = 0;
+            foreach (char c in text) w += (c >= 0x2E80) ? 2 : 1;
+            if (w >= width) return text;
+            return text + new string(' ', width - w);
+        }
+
+        private static string FormatValue(long v, string kind)
+        {
+            if (kind == "action")
+            {
+                switch ((int)v)
+                {
+                    case 0: return "不采取任何操作";
+                    case 1: return "睡眠";
+                    case 2: return "休眠";
+                    case 3: return "关机";
+                    case 4: return "关闭显示器";
+                    default: return "未知（" + v + "）";
+                }
+            }
+            if (kind == "bool") return v == 0 ? "关闭" : "开启";
+            if (v == 0 || v == 4294967295L) return "从不";
+            if (v < 60) return v + " 秒";
+            if (v < 3600)
+            {
+                long m = v / 60, r = v % 60;
+                return r == 0 ? m + " 分钟" : m + " 分 " + r + " 秒";
+            }
+            long h = v / 3600, mm = (v % 3600) / 60;
+            return mm == 0 ? h + " 小时" : h + " 小时 " + mm + " 分";
         }
 
         public static void Energy(Session s)

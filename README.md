@@ -17,6 +17,7 @@ Every release gets its own branch; `main` always tracks the latest development s
 | Branch | Version | Notes |
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
+| `v1.6` | v1.6 | WER and LiveKernelReports mirrored with their folder structure; `powercfg /spr` sleep-study report; SOURCE.txt in every folder |
 | `v1.5` | v1.5 | new "All event log files (.evtx)" item: full mirror of `winevt\Logs` including empty folders (channel export fallback without admin); package folder named after the BIOS serial |
 | `v1.4` | v1.4 | quick links to System.evtx / Application.evtx on the report; output path layout fix |
 | `v1.3` | v1.3 | English UI, reports and folder names; all messages localised |
@@ -31,8 +32,8 @@ New release: work on `main`, then `git branch vX.Y` and tag it with the same nam
 | Group | Items |
 |---|---|
 | Basics | System event log + key event analysis, application event log, all .evtx files, system info and hardware details, drivers and devices, processes/services/startup, patches and installed software, msinfo32 (optional) |
-| Crashes and dumps | Blue screen dumps (Minidump), WER reports, MEMORY.DMP, process memory dump (GB-sized full dump of a running process) |
-| Power and battery | Battery health report, power settings and wake sources (sleep/hibernate/display/disk timeouts, lid and power button action, hybrid sleep), energy report, sleep study |
+| Crashes and dumps | Blue screen dumps (Minidump), WER crash reports (full `C:\ProgramData\Microsoft\Windows\WER` mirror), Live kernel reports (`C:\Windows\LiveKernelReports` mirror), MEMORY.DMP, process memory dump |
+| Power and battery | Battery health report, power settings and wake sources (sleep/hibernate/display/disk timeouts, lid and power button action, hybrid sleep), energy report, sleep study + `powercfg /spr` system power report |
 | Performance | Performance sampling (30 s), dxdiag graphics info |
 | Network | Network configuration snapshot, Wi-Fi connection history |
 | Storage | Disk and SMART health |
@@ -46,6 +47,7 @@ Each run creates `<serial>_<timestamp>/` containing:
 - `All_Content.html` — every text file in one browsable page (sidebar + collapsible blocks)
 - `browse.html` in each subfolder — that folder's text content in a browser
 - `Collection_Info.txt` — what was collected, status and how to read it
+- `SOURCE.txt` in every subfolder — source path, method and time for the files in it, so the package can be verified against the original logs
 - Raw logs: `System.evtx`, `Application.evtx`, `*.dmp`, CSV/TXT exports
 
 Text files are decoded as UTF-8, UTF-16 or GBK automatically, so Chinese output of system tools

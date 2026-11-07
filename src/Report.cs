@@ -424,10 +424,11 @@ namespace LogCollector
             if (dir.StartsWith("31")) return "Windows Error Reporting (WER)";
             if (dir.StartsWith("32")) return "Full memory dump (large)";
             if (dir.StartsWith("33")) return "Process memory dump (opens in WinDbg)";
+            if (dir.StartsWith("34")) return "Live kernel reports (GPU hangs/timeouts, no BSOD)";
             if (dir.StartsWith("40")) return "Battery health report";
             if (dir.StartsWith("41")) return "Power scheme, sleep states, wake sources";
             if (dir.StartsWith("42")) return "Energy audit (60 s)";
-            if (dir.StartsWith("43")) return "Modern Standby (S0ix) diagnostics";
+            if (dir.StartsWith("43")) return "Sleep study and system power report (powercfg /sleepstudy, /spr)";
             if (dir.StartsWith("50")) return "CPU / memory / disk sampling";
             if (dir.StartsWith("60")) return "dxdiag and graphics driver info";
             if (dir.StartsWith("70")) return "Network config, Wi-Fi interfaces and drivers";

@@ -1,4 +1,4 @@
-Laptop Log Collector  v1.5
+Laptop Log Collector  v1.6
 ======================================================================
 
 1. What this is
@@ -47,7 +47,10 @@ and energy items.
 
 [Crashes and dumps]
   Blue screen dumps (Minidump)           copies every .dmp in the Minidump folder
-  Application crash reports (WER)        latest 25, needs admin
+  WER crash reports (full folder)        mirrors C:\ProgramData\Microsoft\Windows\WER
+                                         with its structure; needs admin
+  Live kernel reports                    mirrors C:\Windows\LiveKernelReports
+                                         (GPU hangs/timeouts without a BSOD); needs admin
   Full memory dump (MEMORY.DMP)          only if the system already created it
   Process memory dump (GB)               full dump of a running process
 
@@ -56,7 +59,8 @@ and energy items.
   Power settings and wake sources        sleep/hibernate/display/disk timeouts,
                                          lid and power button action, hybrid sleep
   Energy report (60 s audit)             needs admin
-  Sleep study (Modern Standby)           needs admin
+  Sleep study + system power report      powercfg /sleepstudy and powercfg /spr
+                                         (sleepstudy-report.html); needs admin
 
 [Performance]
   Performance sampling (30 s)            CPU, free memory, disk busy, MHz, battery
@@ -97,12 +101,18 @@ The folder contains:
   22_Runtime_Snapshot\   processes, services, startup items
   23_Patches_Software\
   30_Crash_Dumps\        blue screen dmp files
-  31_WER_Reports\
+  31_WER_Reports\        WER\ is a mirror of C:\ProgramData\Microsoft\Windows\WER
   32_Memory_Dump\        MEMORY.DMP
   33_Process_Dump\       process memory dump
+  34_LiveKernel_Reports\ LiveKernelReports\ mirrors C:\Windows\LiveKernelReports
   40_Battery\ 41_Power_Settings\ 42_Energy_Report\ 43_Sleep_Study\
   50_Performance\ 60_Display_GPU\ 70_Network\ 71_WLAN_Report\ 80_Storage\
   90_App_Logs\
+
+Every folder also contains a SOURCE.txt that records where its files came
+from on this machine (source path, method, time, model and serial), so the
+package can be checked against the original logs. Folders where mirroring
+was incomplete also contain Skipped_Files.txt listing what was left out.
 
 Every folder also contains browse.html, which shows that folder's text
 content in a browser - no tools needed.

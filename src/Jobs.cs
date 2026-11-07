@@ -27,14 +27,15 @@ namespace LogCollector
             list.Add(new JobDef { Id = "msinfo32", Category = "Basics", Name = "msinfo32 full report (slow)", Hint = "More detail, but may hang on some machines (off by default)", DefaultOn = false, Run = Jobs.Msinfo32 });
 
             list.Add(new JobDef { Id = "minidump", Category = "Crashes and dumps", Name = "Blue screen dumps (Minidump)", Hint = "Essential for BSOD (~3 s)", DefaultOn = true, Run = Jobs.MiniDump });
-            list.Add(new JobDef { Id = "wer", Category = "Crashes and dumps", Name = "Application crash reports (WER)", Hint = "Latest 25 reports (~5 s)", DefaultOn = true, Run = Jobs.Wer });
+            list.Add(new JobDef { Id = "wer", Category = "Crashes and dumps", Name = "WER crash reports (full folder)", Hint = "Mirrors C:\\ProgramData\\Microsoft\\Windows\\WER; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.Wer });
+            list.Add(new JobDef { Id = "livekernel", Category = "Crashes and dumps", Name = "Live kernel reports", Hint = "Mirrors C:\\Windows\\LiveKernelReports; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.LiveKernel });
             list.Add(new JobDef { Id = "memdump", Category = "Crashes and dumps", Name = "Full memory dump (MEMORY.DMP)", Hint = "Up to several GB; only if the system already created it", DefaultOn = false, Run = Jobs.MemDump });
             list.Add(new JobDef { Id = "pdump", Category = "Crashes and dumps", Name = "Process memory dump (GB, target process)", Hint = "For leaks/hangs; enter a process name on the right (~10-60 s)", DefaultOn = false, Run = Jobs.ProcessDump });
 
             list.Add(new JobDef { Id = "battery", Category = "Power and battery", Name = "Battery health report", Hint = "Capacity, cycles, health (~5 s)", DefaultOn = true, Run = Jobs.Battery });
             list.Add(new JobDef { Id = "powercfg", Category = "Power and battery", Name = "Power settings and wake sources", Hint = "Sleep, wake, sleep blockers (~5 s)", DefaultOn = true, Run = Jobs.PowerCfg });
             list.Add(new JobDef { Id = "energy", Category = "Power and battery", Name = "Energy report (60 s audit)", Hint = "Requires admin (~60 s)", DefaultOn = false, NeedAdmin = true, Run = Jobs.Energy });
-            list.Add(new JobDef { Id = "sleepstudy", Category = "Power and battery", Name = "Sleep study (Modern Standby)", Hint = "Requires admin (~20 s)", DefaultOn = false, NeedAdmin = true, Run = Jobs.SleepStudy });
+            list.Add(new JobDef { Id = "sleepstudy", Category = "Power and battery", Name = "Sleep study + system power report", Hint = "powercfg /sleepstudy and /spr; requires admin (~60 s)", DefaultOn = true, NeedAdmin = true, Run = Jobs.SleepStudy });
 
             list.Add(new JobDef { Id = "perf", Category = "Performance", Name = "Performance sampling (30 s: CPU/memory/disk)", Hint = "~35 s; do not use the machine while sampling", DefaultOn = false, Run = Jobs.Perf });
             list.Add(new JobDef { Id = "gpu", Category = "Performance", Name = "Graphics and display (dxdiag)", Hint = "Includes TDR records (~20 s)", DefaultOn = true, Run = Jobs.Gpu });
@@ -56,6 +57,7 @@ namespace LogCollector
         public static void SystemEvents(Session s)
         {
             string dir = s.Dir("10_System_Logs");
+            s.Source(dir, @"C:\Windows\System32\winevt\Logs\System.evtx", "exported from the System channel with wevtutil");
             string o;
             Tool.Run("wevtutil.exe", "epl System " + Tool.Q(Path.Combine(dir, "System.evtx")), 180000, s.Token, out o, Encoding.Default);
 
@@ -244,6 +246,7 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
         public static void AppEvents(Session s)
         {
             string dir = s.Dir("11_Application_Logs");
+            s.Source(dir, @"C:\Windows\System32\winevt\Logs\Application.evtx", "exported from the Application channel with wevtutil");
             string o;
             Tool.Run("wevtutil.exe", "epl Application " + Tool.Q(Path.Combine(dir, "Application.evtx")), 180000, s.Token, out o, Encoding.Default);
 
@@ -272,6 +275,7 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
         public static void SysInfo(Session s)
         {
             string dir = s.Dir("20_System_Info");
+            s.Source(dir, @"WMI/CIM + systeminfo + powercfg report parsers", "queried from the running system");
             string o;
             string sys = Path.Combine(dir, "systeminfo.txt");
             Tool.Run("cmd.exe", "/c systeminfo > " + Tool.Q(sys), 60000, s.Token, out o, Encoding.Default);
@@ -343,6 +347,7 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
         public static void Msinfo32(Session s)
         {
             string dir = s.Dir("24_msinfo32");
+            s.Source(dir, @"msinfo32.exe /report", "generated on this machine");
             string f = Path.Combine(dir, "msinfo32.txt");
             string o;
             Tool.Run("msinfo32.exe", "/report " + Tool.Q(f), 45000, s.Token, out o, Encoding.Default);
@@ -391,6 +396,7 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
         public static void Drivers(Session s)
         {
             string dir = s.Dir("21_Drivers_Devices");
+            s.Source(dir, @"driverquery /v   +   pnputil /enum-drivers", "queried from the running system");
             string o;
             Tool.Run("cmd.exe", "/c driverquery /v /fo csv > " + Tool.Q(Path.Combine(dir, "drivers.csv")),
                      120000, s.Token, out o, Encoding.Default);
@@ -404,6 +410,7 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
         public static void Snapshot(Session s)
         {
             string dir = s.Dir("22_Runtime_Snapshot");
+            s.Source(dir, @"Get-Process / Get-Service / startup items / scheduled tasks", "queried from the running system");
             string ps = @"
 '=== Top 30 processes by memory ==='
 Get-Process | Sort-Object WS -Descending | Select-Object -First 30 Name,Id,@{n='CPU_s';e={[math]::Round($_.CPU,1)}},@{n='MemMB';e={[math]::Round($_.WS/1MB,0)}},Handles,Threads | Format-Table -AutoSize | Out-String -Width 300
@@ -421,6 +428,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void Software(Session s)
         {
             string dir = s.Dir("23_Patches_Software");
+            s.Source(dir, @"Get-HotFix + HKLM uninstall registry keys", "queried from the running system");
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("=== Installed updates ===");
             string ps = @"Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 30 HotFixID,Description,InstalledOn | Format-Table -AutoSize | Out-String -Width 200";
@@ -476,6 +484,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void MiniDump(Session s)
         {
             string dir = s.Dir("30_Crash_Dumps");
+            s.Source(dir, @"C:\Windows\Minidump", "copied as-is");
             string src = @"C:\Windows\Minidump";
             int n = 0;
             long bytes = 0;
@@ -641,6 +650,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void MemDump(Session s)
         {
             string dir = s.Dir("32_Memory_Dump");
+            s.Source(dir, @"C:\Windows\MEMORY.DMP", "copied as-is");
             string src = @"C:\Windows\MEMORY.DMP";
             if (!File.Exists(src))
             {
@@ -667,6 +677,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void ProcessDump(Session s)
         {
             string dir = s.Dir("33_Process_Dump");
+            s.Source(dir, @"live process memory (MiniDumpWriteDump)", "dumped from the running process");
             string name = (s.ProcessName ?? "").Trim();
             if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 name = name.Substring(0, name.Length - 4);
@@ -736,46 +747,121 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void Wer(Session s)
         {
             string dir = s.Dir("31_WER_Reports");
-            string[] roots = new string[] {
-                @"C:\ProgramData\Microsoft\Windows\WER\ReportArchive",
-                @"C:\ProgramData\Microsoft\Windows\WER\ReportQueue"
-            };
-            int copied = 0;
-            long bytes = 0;
-            foreach (string root in roots)
-            {
-                if (!Directory.Exists(root)) continue;
-                List<DirectoryInfo> dirs = new List<DirectoryInfo>();
-                try { dirs.AddRange(new DirectoryInfo(root).GetDirectories()); } catch { }
-                dirs.Sort(delegate(DirectoryInfo a, DirectoryInfo b) { return b.LastWriteTime.CompareTo(a.LastWriteTime); });
-                int max = Math.Min(dirs.Count, 25);
-                for (int i = 0; i < max; i++)
-                {
-                    if (s.Token.IsCancellationRequested) return;
-                    string target = Path.Combine(dir, Path.GetFileName(root) + "_" + dirs[i].Name);
-                    long got = CopyTree(dirs[i].FullName, target, 200L * 1024 * 1024);
-                    if (got > 0) { bytes += got; copied++; }
-                }
-            }
-            if (copied == 0)
+            string root = @"C:\ProgramData\Microsoft\Windows\WER";
+            s.Source(dir, root, "full folder mirror, structure and empty folders preserved (needs admin)");
+            if (!Directory.Exists(root)) throw new SkippedException("WER folder not found: " + root);
+
+            int dirs, files, failed;
+            long bytes;
+            MirrorFolder(s, root, Path.Combine(dir, "WER"), 3L * 1024 * 1024 * 1024, out dirs, out files, out bytes, out failed);
+
+            if (files == 0)
             {
                 if (!s.IsAdmin)
                 {
-                    WriteNothing(dir, "Could not copy WER reports. C:\\ProgramData\\Microsoft\\Windows\\WER usually requires administrator rights; please re-run as administrator.");
-                    s.Log("  · Cannot read the WER folder (requires admin)");
-                    throw new SkippedException("Administrator rights are required to read the WER folder");
+                    WriteNothing(dir, "Could not read " + root + ". This folder usually requires administrator rights.");
+                    throw new SkippedException("Administrator rights are required to read " + root);
                 }
-                WriteNothing(dir, "No crash reports in the WER folder (no recent application crashes).");
-                s.Log("  · WER folder is empty");
-                throw new SkippedException("No crash reports in the WER folder (no recent app crashes)");
+                WriteNothing(dir, "The WER folder contains no files.");
+                throw new SkippedException("The WER folder contains no files");
             }
-            s.Log("  · Copied " + copied + " crash report(s), " + Tool.FmtSize(bytes));
+            s.Log("  · " + files + " file(s) in " + dirs + " folder(s), " + Tool.FmtSize(bytes)
+                  + (failed > 0 ? ", " + failed + " failed" : ""));
+        }
+
+        /// <summary>LiveKernelReports（无蓝屏的 GPU 挂起/超时等）整目录镜像。</summary>
+        public static void LiveKernel(Session s)
+        {
+            string dir = s.Dir("34_LiveKernel_Reports");
+            string root = @"C:\Windows\LiveKernelReports";
+            s.Source(dir, root, "full folder mirror, structure and empty folders preserved (needs admin)");
+            if (!Directory.Exists(root)) throw new SkippedException("Live kernel report folder not found: " + root);
+
+            int dirs, files, failed;
+            long bytes;
+            MirrorFolder(s, root, Path.Combine(dir, "LiveKernelReports"), 4L * 1024 * 1024 * 1024, out dirs, out files, out bytes, out failed);
+
+            if (files == 0)
+                throw new SkippedException("No live kernel report could be copied (empty, or administrator rights required)");
+            s.Log("  · " + files + " file(s) in " + dirs + " folder(s), " + Tool.FmtSize(bytes)
+                  + (failed > 0 ? ", " + failed + " failed" : ""));
+        }
+
+        /// <summary>整目录镜像：保留子目录（含空目录），限制总体积，失败/跳过项写入 Skipped_Files.txt。</summary>
+        private static void MirrorFolder(Session s, string source, string dest, long capBytes,
+                                         out int dirs, out int files, out long bytes, out int failed)
+        {
+            dirs = 0; files = 0; bytes = 0; failed = 0;
+            Directory.CreateDirectory(dest);
+            StringBuilder skipped = new StringBuilder();
+            long free = 0;
+            try { free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dest))).AvailableFreeSpace; } catch { }
+
+            List<string> subDirs = new List<string>();
+            try { subDirs.AddRange(Directory.GetDirectories(source, "*", SearchOption.AllDirectories)); }
+            catch (Exception ex) { s.Log("  · Directory enumeration incomplete: " + ex.Message); }
+            subDirs.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (string d in subDirs)
+            {
+                if (s.Token.IsCancellationRequested) return;
+                string rel = d.Substring(source.Length).TrimStart('\\');
+                try { Directory.CreateDirectory(Path.Combine(dest, rel)); dirs++; }
+                catch { failed++; }
+            }
+
+            List<string> all = new List<string>();
+            try { all.AddRange(Directory.GetFiles(source, "*", SearchOption.AllDirectories)); }
+            catch (Exception ex) { s.Log("  · File enumeration incomplete: " + ex.Message); }
+            all.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (string f in all)
+            {
+                if (s.Token.IsCancellationRequested) return;
+                if (bytes > capBytes)
+                {
+                    skipped.AppendLine(f + "  (size limit reached)");
+                    failed++;
+                    continue;
+                }
+                long len = 0;
+                try { len = new FileInfo(f).Length; } catch { }
+                if (free > 0 && len + 512L * 1024 * 1024 > free)
+                {
+                    skipped.AppendLine(f + "  (not enough free space)");
+                    failed++;
+                    continue;
+                }
+                string rel = f.Substring(source.Length).TrimStart('\\');
+                try
+                {
+                    string target = Path.Combine(dest, rel);
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    File.Copy(f, target, true);
+                    bytes += len;
+                    free -= len;
+                    files++;
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    skipped.AppendLine(f + "  (" + ex.Message.Replace("\r", " ").Replace("\n", " ") + ")");
+                }
+            }
+            if (skipped.Length > 0)
+            {
+                try
+                {
+                    File.WriteAllText(Path.Combine(Path.GetDirectoryName(dest), "Skipped_Files.txt"),
+                                      skipped.ToString(), new UTF8Encoding(true));
+                }
+                catch { }
+            }
         }
 
         // ---------------- power ----------------
         public static void Battery(Session s)
         {
             string dir = s.Dir("40_Battery");
+            s.Source(dir, @"powercfg /batteryreport", "generated on this machine");
             string o;
             string f = Path.Combine(dir, "battery_report.html");
             int rc = Tool.Run("powercfg.exe", "/batteryreport /output " + Tool.Q(f) + " /duration 14",
@@ -806,6 +892,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void PowerCfg(Session s)
         {
             string dir = s.Dir("41_Power_Settings");
+            s.Source(dir, @"powercfg /qh, /a, /getactivescheme, /requests, /lastwake, /waketimers", "queried from the running system");
             StringBuilder sb = new StringBuilder();
             string[][] cmds = new string[][] {
                 new string[] { "Available sleep states", "/a" },
@@ -941,6 +1028,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void Energy(Session s)
         {
             string dir = s.Dir("42_Energy_Report");
+            s.Source(dir, @"powercfg /energy /duration 60", "generated on this machine");
             string f = Path.Combine(dir, "energy_report.html");
             string o;
             int rc = Tool.Run("powercfg.exe", "/energy /output " + Tool.Q(f) + " /duration 60",
@@ -952,17 +1040,39 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         public static void SleepStudy(Session s)
         {
             string dir = s.Dir("43_Sleep_Study");
+            s.Source(dir, @"powercfg /sleepstudy  +  powercfg /spr  ->  C:\Windows\System32\sleepstudy-report.html",
+                     "reports generated on this machine (needs administrator)");
             string f = Path.Combine(dir, "sleep_study.html");
             string o;
             Tool.Run("powercfg.exe", "/sleepstudy /output " + Tool.Q(f), 180000, s.Token, out o, Encoding.Default);
             WaitFile(f, 30000, s.Token);
-            if (!File.Exists(f)) throw new Exception("Sleep study failed (requires admin and Modern Standby support): " + Trim(o, 200));
+
+            // powercfg /spr 生成睡眠研究报告（默认落在 System32 下），需要管理员
+            string sprSrc = @"C:\Windows\System32\sleepstudy-report.html";
+            try
+            {
+                Tool.Run("powercfg.exe", "/spr", 300000, s.Token, out o, Encoding.Default);
+                WaitFile(sprSrc, 60000, s.Token);
+                if (File.Exists(sprSrc))
+                {
+                    File.Copy(sprSrc, Path.Combine(dir, "sleepstudy-report.html"), true);
+                    s.Log("  · sleep study report from powercfg /spr copied");
+                }
+            }
+            catch { }
+
+            bool ok1 = File.Exists(f);
+            bool ok2 = File.Exists(Path.Combine(dir, "sleepstudy-report.html"));
+            if (!ok1 && !ok2)
+                throw new Exception("Sleep study failed (requires admin and Modern Standby support): " + Trim(o, 200));
+            if (!ok2) s.Log("  · powercfg /spr produced no report (Sleep Study may be unsupported here)");
         }
 
         // ---------------- performance ----------------
         public static void Perf(Session s)
         {
             string dir = s.Dir("50_Performance");
+            s.Source(dir, @"performance counters (Win32_PerfFormattedData)", "sampled for 20 seconds");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
 Write-Output 'Time,CPU%,FreeMemMB,CommittedMB,DiskBusy%,CPUMHz,Battery%'
@@ -990,6 +1100,7 @@ for($i=0; $i -lt 20; $i++){
         public static void Gpu(Session s)
         {
             string dir = s.Dir("60_Display_GPU");
+            s.Source(dir, @"dxdiag /t", "generated on this machine");
             string f = Path.Combine(dir, "dxdiag.txt");
             string o;
             Tool.Run("dxdiag.exe", "/t " + Tool.Q(f), 120000, s.Token, out o, Encoding.Default);
@@ -1001,6 +1112,7 @@ for($i=0; $i -lt 20; $i++){
         public static void NetCfg(Session s)
         {
             string dir = s.Dir("70_Network");
+            s.Source(dir, @"ipconfig /all, route print, arp -a, netsh wlan / int tcp", "queried from the running system");
             StringBuilder sb = new StringBuilder();
             string[][] cmds = new string[][] {
                 new string[] { "IP configuration", "ipconfig /all" },
@@ -1026,6 +1138,7 @@ for($i=0; $i -lt 20; $i++){
         public static void WlanReport(Session s)
         {
             string dir = s.Dir("71_WLAN_Report");
+            s.Source(dir, @"netsh wlan show wlanreport -> C:\ProgramData\Microsoft\Windows\WlanReport", "generated on this machine");
             string o;
             Tool.Run("netsh.exe", "wlan show wlanreport", 120000, s.Token, out o, Encoding.Default);
             string src = @"C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html";
@@ -1049,6 +1162,7 @@ for($i=0; $i -lt 20; $i++){
         public static void Disk(Session s)
         {
             string dir = s.Dir("80_Storage");
+            s.Source(dir, @"Get-PhysicalDisk / Get-Volume / Get-StorageReliabilityCounter", "queried from the running system");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
 '=== Physical disks ==='
@@ -1078,6 +1192,7 @@ Get-Disk | Select-Object Number,FriendlyName,PartitionStyle,@{n='SizeGB';e={[mat
             if (string.IsNullOrEmpty(s.AppDir) || !Directory.Exists(s.AppDir))
                 throw new Exception("No valid extra log folder specified");
             string dir = s.Dir("90_App_Logs");
+            s.Source(dir, s.AppDir, "copied from the folder entered in the UI");
             long bytes = CopyTree(s.AppDir, Path.Combine(dir, new DirectoryInfo(s.AppDir).Name), 1500L * 1024 * 1024);
             if (bytes == 0) WriteNothing(dir, "Target folder is empty or unreadable: " + s.AppDir);
         }

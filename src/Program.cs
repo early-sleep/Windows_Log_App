@@ -24,6 +24,7 @@ namespace LogCollector
             d["msinfo32"] = "24_msinfo32";
             d["minidump"] = "30_Crash_Dumps";
             d["wer"] = "31_WER_Reports";
+            d["livekernel"] = "34_LiveKernel_Reports";
             d["memdump"] = "32_Memory_Dump";
             d["pdump"] = "33_Process_Dump";
             d["battery"] = "40_Battery";
@@ -202,7 +203,7 @@ namespace LogCollector
 
     static class Program
     {
-        public const string Version = "1.5";
+        public const string Version = "1.6";
 
         [STAThread]
         static int Main(string[] args)

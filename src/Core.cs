@@ -150,6 +150,28 @@ namespace LogCollector
             if (!Directory.Exists(p)) Directory.CreateDirectory(p);
             return p;
         }
+
+        /// <summary>在输出目录里记一条来源说明，方便人工核对这批文件是从哪台机器的哪个路径来的。</summary>
+        public void Source(string dir, string source, string method)
+        {
+            try
+            {
+                System.Text.StringBuilder b = new System.Text.StringBuilder();
+                string f = System.IO.Path.Combine(dir, "SOURCE.txt");
+                if (!System.IO.File.Exists(f))
+                {
+                    b.AppendLine("Folder : " + System.IO.Path.GetFileName(dir));
+                    b.AppendLine("Machine: " + Info.Display() + "   SN " + Info.Serial);
+                    b.AppendLine("------------------------------");
+                }
+                b.AppendLine("Source : " + source);
+                if (!string.IsNullOrEmpty(method)) b.AppendLine("Method : " + method);
+                b.AppendLine("Time   : " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss"));
+                b.AppendLine();
+                System.IO.File.AppendAllText(f, b.ToString(), new System.Text.UTF8Encoding(true));
+            }
+            catch { }
+        }
     }
 
     public static class Tool

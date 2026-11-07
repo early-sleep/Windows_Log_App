@@ -1,4 +1,4 @@
-Laptop Log Collector  v1.6
+Laptop Log Collector  v1.7
 ======================================================================
 
 1. What this is
@@ -73,6 +73,15 @@ and energy items.
 [Storage]
   Disk and SMART health                  health, temperature, power-on hours, wear
 
+[Setup and component logs]
+  Windows setup logs (Panther)           mirrors C:\Windows\Panther: setupact.log,
+                                         setupapi, migration and rollback data
+                                         (can be ~2 GB; needs admin)
+  Windows component logs                 mirrors C:\Windows\Logs: CBS, DISM,
+                                         WindowsUpdate, WinRE, MoSetup
+  Driver INF and setup logs              mirrors C:\Windows\INF incl. setupapi.dev.log
+                                         and every installed driver INF
+
 [Other]
   Extra log folder                       logs of the application under test
 
@@ -105,6 +114,9 @@ The folder contains:
   32_Memory_Dump\        MEMORY.DMP
   33_Process_Dump\       process memory dump
   34_LiveKernel_Reports\ LiveKernelReports\ mirrors C:\Windows\LiveKernelReports
+  35_Setup_Panther\      Panther\ mirrors C:\Windows\Panther
+  36_Windows_Logs\       Logs\ mirrors C:\Windows\Logs
+  37_Inf_Drivers\        INF\ mirrors C:\Windows\INF
   40_Battery\ 41_Power_Settings\ 42_Energy_Report\ 43_Sleep_Study\
   50_Performance\ 60_Display_GPU\ 70_Network\ 71_WLAN_Report\ 80_Storage\
   90_App_Logs\

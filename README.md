@@ -17,6 +17,7 @@ Every release gets its own branch; `main` always tracks the latest development s
 | Branch | Version | Notes |
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
+| `v1.7` | v1.7 | `C:\Windows\Panther`, `C:\Windows\Logs`, `C:\Windows\INF` mirrored with their folder structure |
 | `v1.6` | v1.6 | WER and LiveKernelReports mirrored with their folder structure; `powercfg /spr` sleep-study report; SOURCE.txt in every folder |
 | `v1.5` | v1.5 | new "All event log files (.evtx)" item: full mirror of `winevt\Logs` including empty folders (channel export fallback without admin); package folder named after the BIOS serial |
 | `v1.4` | v1.4 | quick links to System.evtx / Application.evtx on the report; output path layout fix |
@@ -37,6 +38,7 @@ New release: work on `main`, then `git branch vX.Y` and tag it with the same nam
 | Performance | Performance sampling (30 s), dxdiag graphics info |
 | Network | Network configuration snapshot, Wi-Fi connection history |
 | Storage | Disk and SMART health |
+| Setup and component logs | Panther setup logs, `C:\Windows\Logs` (CBS/DISM/WindowsUpdate), `C:\Windows\INF` driver INFs and setupapi logs |
 | Other | Extra log folder (custom path) |
 
 ## Output

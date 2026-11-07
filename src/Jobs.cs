@@ -45,6 +45,10 @@ namespace LogCollector
 
             list.Add(new JobDef { Id = "disk", Category = "Storage", Name = "Disk and SMART health", Hint = "Health, temperature, power-on hours (~5 s)", DefaultOn = true, Run = Jobs.Disk });
 
+            list.Add(new JobDef { Id = "panther", Category = "Setup and component logs", Name = "Windows setup logs (Panther)", Hint = "Mirrors C:\\Windows\\Panther; can be ~2 GB; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.PantherLogs });
+            list.Add(new JobDef { Id = "winlogs", Category = "Setup and component logs", Name = "Windows component logs", Hint = "Mirrors C:\\Windows\\Logs (CBS, DISM, WindowsUpdate, WinRE)", DefaultOn = true, Run = Jobs.WindowsLogs });
+            list.Add(new JobDef { Id = "inf", Category = "Setup and component logs", Name = "Driver INF and setup logs", Hint = "Mirrors C:\\Windows\\INF (setupapi.dev.log and friends)", DefaultOn = true, Run = Jobs.InfFolder });
+
             list.Add(new JobDef { Id = "appdir", Category = "Other", Name = "Extra log folder (custom path)", Hint = "Logs of the application under test", DefaultOn = false, Run = Jobs.AppDir });
 
             return list;
@@ -785,6 +789,45 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 throw new SkippedException("No live kernel report could be copied (empty, or administrator rights required)");
             s.Log("  · " + files + " file(s) in " + dirs + " folder(s), " + Tool.FmtSize(bytes)
                   + (failed > 0 ? ", " + failed + " failed" : ""));
+        }
+
+        /// <summary>通用整目录镜像任务。</summary>
+        private static void MirrorJob(Session s, string folder, string root, string method, long capBytes)
+        {
+            string dir = s.Dir(folder);
+            s.Source(dir, root, method);
+            if (!Directory.Exists(root)) throw new SkippedException("Folder not found: " + root);
+
+            int dirs, files, failed;
+            long bytes;
+            MirrorFolder(s, root, Path.Combine(dir, Path.GetFileName(root)), capBytes,
+                         out dirs, out files, out bytes, out failed);
+
+            if (files == 0)
+                throw new SkippedException("Nothing could be copied from " + root + " (empty, or administrator rights required)");
+            s.Log("  · " + files + " file(s) in " + dirs + " folder(s), " + Tool.FmtSize(bytes)
+                  + (failed > 0 ? ", " + failed + " failed" : ""));
+        }
+
+        /// <summary>C:\Windows\Panther —— 安装/迁移日志（setupact.log 可能有 1 GB）。</summary>
+        public static void PantherLogs(Session s)
+        {
+            MirrorJob(s, "35_Setup_Panther", @"C:\Windows\Panther",
+                      "full folder mirror, structure and empty folders preserved (needs admin)", 2560L * 1024 * 1024);
+        }
+
+        /// <summary>C:\Windows\Logs —— CBS / DISM / WindowsUpdate 等组件日志。</summary>
+        public static void WindowsLogs(Session s)
+        {
+            MirrorJob(s, "36_Windows_Logs", @"C:\Windows\Logs",
+                      "full folder mirror, structure and empty folders preserved", 2048L * 1024 * 1024);
+        }
+
+        /// <summary>C:\Windows\INF —— 驱动 INF 与 setupapi 设备安装日志。</summary>
+        public static void InfFolder(Session s)
+        {
+            MirrorJob(s, "37_Inf_Drivers", @"C:\Windows\INF",
+                      "full folder mirror, structure and empty folders preserved", 1024L * 1024 * 1024);
         }
 
         /// <summary>整目录镜像：保留子目录（含空目录），限制总体积，失败/跳过项写入 Skipped_Files.txt。</summary>

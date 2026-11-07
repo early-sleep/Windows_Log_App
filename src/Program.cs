@@ -36,6 +36,9 @@ namespace LogCollector
             d["netcfg"] = "70_Network";
             d["wlan"] = "71_WLAN_Report";
             d["disk"] = "80_Storage";
+            d["panther"] = "35_Setup_Panther";
+            d["winlogs"] = "36_Windows_Logs";
+            d["inf"] = "37_Inf_Drivers";
             d["appdir"] = "90_App_Logs";
             return d;
         }
@@ -203,7 +206,7 @@ namespace LogCollector
 
     static class Program
     {
-        public const string Version = "1.6";
+        public const string Version = "1.7";
 
         [STAThread]
         static int Main(string[] args)

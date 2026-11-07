@@ -434,6 +434,9 @@ namespace LogCollector
             if (dir.StartsWith("70")) return "Network config, Wi-Fi interfaces and drivers";
             if (dir.StartsWith("71")) return "Wi-Fi connection history timeline";
             if (dir.StartsWith("80")) return "Disk and SMART health";
+            if (dir.StartsWith("35")) return "Windows setup logs (Panther): setupact, migration, rollback";
+            if (dir.StartsWith("36")) return "Windows component logs: CBS, DISM, WindowsUpdate, WinRE";
+            if (dir.StartsWith("37")) return "Driver INF files and setupapi device install logs";
             if (dir.StartsWith("90")) return "Extra logs from the given folder";
             return "";
         }

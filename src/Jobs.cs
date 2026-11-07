@@ -19,6 +19,7 @@ namespace LogCollector
 
             list.Add(new JobDef { Id = "events-system", Category = "Basics", Name = "System event log + key event analysis", Hint = "BSOD, unexpected shutdown, driver and hardware errors (~10 s)", DefaultOn = true, Run = Jobs.SystemEvents });
             list.Add(new JobDef { Id = "events-app", Category = "Basics", Name = "Application event log", Hint = "App crashes and hangs (~10 s)", DefaultOn = true, Run = Jobs.AppEvents });
+            list.Add(new JobDef { Id = "evtx-all", Category = "Basics", Name = "All event log files (.evtx)", Hint = "Mirrors winevt\\Logs incl. empty folders (~30 s as admin); ~2 min without", DefaultOn = true, Run = Jobs.AllEventLogs });
             list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info and hardware details", Hint = "Model, BIOS, CPU, memory, battery, problem devices (~15 s)", DefaultOn = true, Run = Jobs.SysInfo });
             list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Drivers and devices", Hint = "Driver versions, signing, problem devices (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
             list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Processes, services and startup", Hint = "Current runtime state (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
@@ -81,6 +82,163 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             string outp = Tool.Ps(script, 180000, s.Token);
             File.WriteAllText(Path.Combine(dir, "key_events.csv"), outp, new UTF8Encoding(true));
             ParseEvents(outp, "System", s);
+        }
+
+        /// <summary>把 winevt\Logs 下所有 .evtx 连目录结构（含空目录）整体镜像出来。</summary>
+        public static void AllEventLogs(Session s)
+        {
+            string dir = s.Dir("12_All_Event_Logs");
+            string root = @"C:\Windows\System32\winevt\Logs";
+            string dest = Path.Combine(dir, "Logs");
+            if (!Directory.Exists(root)) throw new SkippedException("Event log folder not found: " + root);
+            Directory.CreateDirectory(dest);
+
+            StringBuilder index = new StringBuilder();
+            index.AppendLine("RelativePath,Type,SizeBytes,LastWriteTime,Status");
+            int dirCount = 0, fileCount = 0, failed = 0;
+            long total = 0;
+
+            long free = 0;
+            try { free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dir))).AvailableFreeSpace; } catch { }
+            const long Reserve = 500L * 1024 * 1024;
+
+            // 1) 目录结构：空目录也照原样建立
+            List<string> dirs = new List<string>();
+            try { dirs.AddRange(Directory.GetDirectories(root, "*", SearchOption.AllDirectories)); }
+            catch (Exception ex) { s.Log("  · Directory enumeration incomplete: " + ex.Message); }
+            dirs.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (string d in dirs)
+            {
+                if (s.Token.IsCancellationRequested) return;
+                string rel = d.Substring(root.Length).TrimStart('\\');
+                try
+                {
+                    Directory.CreateDirectory(Path.Combine(dest, rel));
+                    dirCount++;
+                    bool hasEvtx = false;
+                    try { hasEvtx = Directory.GetFiles(d, "*.evtx").Length > 0; } catch { }
+                    index.AppendLine(Csv(rel) + ",directory,0,," + (hasEvtx ? "has-evtx" : "empty"));
+                }
+                catch (Exception ex)
+                {
+                    index.AppendLine(Csv(rel) + ",directory,0,,failed: " + CsvClean(ex.Message));
+                }
+            }
+
+            // 2) .evtx 文件
+            List<string> files = new List<string>();
+            try { files.AddRange(Directory.GetFiles(root, "*.evtx", SearchOption.AllDirectories)); }
+            catch (Exception ex) { s.Log("  · File enumeration incomplete: " + ex.Message); }
+            files.Sort(StringComparer.OrdinalIgnoreCase);
+            foreach (string f in files)
+            {
+                if (s.Token.IsCancellationRequested) return;
+                if (free > 0 && free < Reserve)
+                {
+                    index.AppendLine(Csv(f.Substring(root.Length).TrimStart('\\')) + ",evtx,0,,skipped: not enough free space");
+                    failed++;
+                    continue;
+                }
+                string rel = f.Substring(root.Length).TrimStart('\\');
+                string target = Path.Combine(dest, rel);
+                try
+                {
+                    Directory.CreateDirectory(Path.GetDirectoryName(target));
+                    FileInfo fi = new FileInfo(f);
+                    File.Copy(f, target, true);
+                    long len = new FileInfo(target).Length;
+                    total += len;
+                    free -= len;
+                    fileCount++;
+                    index.AppendLine(Csv(rel) + ",evtx," + len + "," + fi.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss") + ",copied");
+                }
+                catch (Exception ex)
+                {
+                    failed++;
+                    index.AppendLine(Csv(rel) + ",evtx,0,,failed: " + CsvClean(ex.Message));
+                }
+            }
+
+            File.WriteAllText(Path.Combine(dir, "EventLog_Index.csv"), index.ToString(), new UTF8Encoding(true));
+
+            if (fileCount == 0)
+            {
+                int ch = ExportChannels(s, dir);
+                if (ch > 0)
+                {
+                    try
+                    {
+                        if (Directory.Exists(dest) && Directory.GetFileSystemEntries(dest).Length == 0)
+                            Directory.Delete(dest, true);
+                    }
+                    catch { }
+                    s.Log("  · Folder mirror blocked (needs admin); exported " + ch + " channel(s) instead");
+                    WriteNothing(dir, "The winevt\\Logs folder can only be read by administrators, so the original\r\n"
+                                    + "folder structure was NOT mirrored (empty folders are also unavailable this way).\r\n\r\n"
+                                    + "Instead, " + ch + " readable event channels were exported with wevtutil into the\r\n"
+                                    + "Channels subfolder, one .evtx per channel.\r\n\r\n"
+                                    + "Run the tool as administrator to get an exact mirror of winevt\\Logs,\r\n"
+                                    + "including every subfolder and empty folder.");
+                    return;
+                }
+                throw new SkippedException("No .evtx file could be copied (" + failed
+                    + " failed, likely locked or access denied). Run as administrator to mirror winevt\\Logs.");
+            }
+            s.Log("  · " + fileCount + " .evtx file(s), " + dirCount + " folder(s), " + Tool.FmtSize(total)
+                  + (failed > 0 ? ", " + failed + " failed" : ""));
+        }
+
+        /// <summary>备用路径：按通道逐个导出，标准用户也能拿到大部分日志。</summary>
+        private static int ExportChannels(Session s, string dir)
+        {
+            string chDir = Path.Combine(dir, "Channels");
+            Directory.CreateDirectory(chDir);
+            string list;
+            Tool.Run("wevtutil.exe", "el", 120000, s.Token, out list, Encoding.Default);
+            if (string.IsNullOrEmpty(list)) return 0;
+
+            StringBuilder idx = new StringBuilder();
+            idx.AppendLine("Channel,File,SizeBytes,Status");
+            int ok = 0;
+            foreach (string raw in list.Split(new char[] { '\r', '\n' }, StringSplitOptions.RemoveEmptyEntries))
+            {
+                if (s.Token.IsCancellationRequested) break;
+                string channel = raw.Trim();
+                if (channel.Length == 0) continue;
+                string safe = Runner.SafeName(channel);
+                string f = Path.Combine(chDir, safe + ".evtx");
+                int dup = 1;
+                while (File.Exists(f))
+                {
+                    dup++;
+                    f = Path.Combine(chDir, safe + "_" + dup + ".evtx");
+                }
+                string err;
+                Tool.Run("wevtutil.exe", "epl " + Tool.Q(channel) + " " + Tool.Q(f), 60000, s.Token, out err, Encoding.Default);
+                long len = 0;
+                try { if (File.Exists(f)) len = new FileInfo(f).Length; } catch { }
+                if (len > 0)
+                {
+                    ok++;
+                    idx.AppendLine(Csv(channel) + "," + Csv(safe + ".evtx") + "," + len + ",exported");
+                }
+                else
+                {
+                    idx.AppendLine(Csv(channel) + ",,0,failed: " + CsvClean(err));
+                }
+            }
+            File.WriteAllText(Path.Combine(dir, "Channel_Index.csv"), idx.ToString(), new UTF8Encoding(true));
+            return ok;
+        }
+
+        private static string Csv(string v)
+        {
+            return "\"" + (v == null ? "" : v.Replace("\"", "\"\"")) + "\"";
+        }
+
+        private static string CsvClean(string v)
+        {
+            return v == null ? "" : v.Replace("\r", " ").Replace("\n", " ").Replace(",", ";");
         }
 
         public static void AppEvents(Session s)

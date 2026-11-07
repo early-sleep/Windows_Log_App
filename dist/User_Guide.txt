@@ -1,4 +1,4 @@
-Laptop Log Collector  v1.4
+Laptop Log Collector  v1.5
 ======================================================================
 
 1. What this is
@@ -35,6 +35,8 @@ and energy items.
   System event log + key event analysis  BSOD, unexpected shutdown, driver
                                          and hardware errors
   Application event log                  app crashes and hangs
+  All event log files (.evtx)            every .evtx under winevt\Logs, folder
+                                         structure mirrored incl. empty folders
   System info and hardware details       model, serial, BIOS, CPU, memory,
                                          graphics, battery, problem devices
   Drivers and devices                    driver versions, signing, driver
@@ -73,7 +75,13 @@ and energy items.
 5. Output
 ----------------------------------------------------------------------
 Default output folder: Desktop\LogCollection\
-Each run creates a folder named <serial>_<timestamp> containing:
+Each run creates a folder named <BIOS serial>_<timestamp>, for example
+N4N0CV01760013H_20261107-162543. The serial number is read from the BIOS
+(Win32_BIOS.SerialNumber). If the BIOS returns a placeholder such as
+"Default string", the model name is used instead and the log says so.
+The timestamp keeps several runs on the same machine apart.
+
+The folder contains:
 
   report.html            start here: key findings, event timeline,
                          hardware, battery and power settings
@@ -81,6 +89,9 @@ Each run creates a folder named <serial>_<timestamp> containing:
   Collection_Info.txt    what was collected, status and how to read it
   10_System_Logs\        System.evtx + key_events.csv
   11_Application_Logs\   Application.evtx + app_crash_events.csv
+  12_All_Event_Logs\     all .evtx files: Logs\ is an exact mirror of winevt\Logs
+                         (empty folders included) when run as administrator;
+                         otherwise Channels\ holds one .evtx per exported channel
   20_System_Info\        systeminfo.txt / hardware_info.csv / system_summary.txt
   21_Drivers_Devices\    drivers.csv / driver_store.txt / problem_devices.txt
   22_Runtime_Snapshot\   processes, services, startup items

@@ -16,6 +16,7 @@ namespace LogCollector
             Dictionary<string, string> d = new Dictionary<string, string>();
             d["events-system"] = "10_System_Logs";
             d["events-app"] = "11_Application_Logs";
+            d["evtx-all"] = "12_All_Event_Logs";
             d["sysinfo"] = "20_System_Info";
             d["drivers"] = "21_Drivers_Devices";
             d["snapshot"] = "22_Runtime_Snapshot";
@@ -64,6 +65,8 @@ namespace LogCollector
             int total = jobs.Count;
             int failed = 0;
             Jobs.DumpPolicyRam(s.Info.RamGB);
+            s.Log("Package: " + Path.GetFileName(s.OutDir)
+                  + (string.IsNullOrEmpty(s.Info.Serial) ? "  (BIOS serial not available, named after the model)" : ""));
 
             for (int i = 0; i < total; i++)
             {
@@ -199,7 +202,7 @@ namespace LogCollector
 
     static class Program
     {
-        public const string Version = "1.4";
+        public const string Version = "1.5";
 
         [STAThread]
         static int Main(string[] args)

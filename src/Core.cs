@@ -374,10 +374,36 @@ namespace LogCollector
             return o.ToString().Trim();
         }
 
+        /// <summary>读取 BIOS 序列号；取不到或明显是占位值时返回空串。</summary>
         public static string FetchSerial(CancellationToken token)
         {
-            string outp = Ps("(Get-CimInstance Win32_BIOS).SerialNumber", 15000, token);
-            return outp.Trim();
+            string sn = CleanSerial(Ps("(Get-CimInstance Win32_BIOS).SerialNumber", 20000, token));
+            if (IsBadSerial(sn))
+            {
+                string w = CleanSerial(Ps("(Get-WmiObject Win32_BIOS).SerialNumber", 20000, token));
+                if (!IsBadSerial(w)) sn = w;
+            }
+            if (IsBadSerial(sn)) return "";
+            return sn;
+        }
+
+        private static string CleanSerial(string s)
+        {
+            if (s == null) return "";
+            s = s.Replace("\r", "").Replace("\n", "").Replace("\t", "").Trim();
+            return s;
+        }
+
+        private static bool IsBadSerial(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return true;
+            string t = s.Trim().ToLowerInvariant();
+            if (t.Length < 3) return true;
+            string[] bad = { "default string", "to be filled by o.e.m.", "to be filled by oem",
+                             "none", "n/a", "system serial number", "serial number",
+                             "unknown", "not specified", "invalid", "0", "oem" };
+            foreach (string b in bad) if (t == b) return true;
+            return false;
         }
     }
 

@@ -414,6 +414,7 @@ namespace LogCollector
         {
             if (dir.StartsWith("10")) return "Raw system event log and key events table";
             if (dir.StartsWith("11")) return "Application event log and crash records";
+            if (dir.StartsWith("12")) return "Every .evtx mirrored from winevt\\Logs (folder structure kept, incl. empty folders)";
             if (dir.StartsWith("20")) return "System info, hardware details, summary";
             if (dir.StartsWith("21")) return "Driver list, driver store, problem devices";
             if (dir.StartsWith("22")) return "Processes, services, startup, scheduled tasks";

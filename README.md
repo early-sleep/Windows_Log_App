@@ -17,6 +17,7 @@ Every release gets its own branch; `main` always tracks the latest development s
 | Branch | Version | Notes |
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
+| `v1.4` | v1.4 | quick links to System.evtx / Application.evtx on the report; output path layout fix |
 | `v1.3` | v1.3 | English UI, reports and folder names; all messages localised |
 | `v1.2` | v1.2 | power/sleep timeout collection; HTML viewer (All_Content.html + browse.html) |
 | `v1.1` | v1.1 | process memory dump; "skipped" instead of false success; dump-config diagnostics |

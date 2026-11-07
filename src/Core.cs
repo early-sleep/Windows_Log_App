@@ -11,7 +11,7 @@ namespace LogCollector
 {
     public enum JobStatus { Pending, Running, Success, Failed, Skipped, Cancelled }
 
-    /// <summary>采集项正常执行，但目标数据不存在或系统不支持，属于“没采到”而不是“采集失败”。</summary>
+    /// <summary>Job ran fine but the data does not exist or the OS does not support it: "nothing to collect", not a failure.</summary>
     public class SkippedException : Exception
     {
         public SkippedException(string message) : base(message) { }
@@ -43,7 +43,7 @@ namespace LogCollector
             string s = Model;
             if (Manufacturer.Length > 0 && Model.IndexOf(Manufacturer, StringComparison.OrdinalIgnoreCase) < 0)
                 s = Manufacturer + " " + Model;
-            if (s.Trim().Length == 0) s = "未知机型";
+            if (s.Trim().Length == 0) s = "Unknown model";
             return s;
         }
     }
@@ -109,8 +109,8 @@ namespace LogCollector
 
         public string RangeText()
         {
-            if (EventMax <= EventMin) return "未获取到";
-            return EventMin.ToString("yyyy-MM-dd HH:mm") + " 至 " + EventMax.ToString("yyyy-MM-dd HH:mm");
+            if (EventMax <= EventMin) return "Not available";
+            return EventMin.ToString("yyyy-MM-dd HH:mm") + " to " + EventMax.ToString("yyyy-MM-dd HH:mm");
         }
         public CancellationToken Token;
         public Action<string> OnLog;
@@ -318,7 +318,7 @@ namespace LogCollector
                     if (k != null)
                     {
                         m.Cpu = S(k.GetValue("ProcessorNameString"));
-                        m.CpuCores = Environment.ProcessorCount + " 线程";
+                        m.CpuCores = Environment.ProcessorCount + " threads";
                     }
                 }
             }
@@ -347,7 +347,7 @@ namespace LogCollector
                 }
             }
             catch { }
-            m.OsArch = Environment.Is64BitOperatingSystem ? "64 位" : "32 位";
+            m.OsArch = Environment.Is64BitOperatingSystem ? "64-bit" : "32-bit";
             try
             {
                 MEMORYSTATUSEX st = new MEMORYSTATUSEX();
@@ -360,8 +360,8 @@ namespace LogCollector
             {
                 TimeSpan up = TimeSpan.FromMilliseconds((uint)Environment.TickCount);
                 m.Uptime = up.Days > 0
-                    ? up.Days + " 天 " + up.Hours + " 小时"
-                    : up.Hours + " 小时 " + up.Minutes + " 分";
+                    ? up.Days + " d " + up.Hours + " h"
+                    : up.Hours + " h " + up.Minutes + " min";
                 m.BootTime = DateTime.Now.Subtract(up).ToString("yyyy-MM-dd HH:mm");
             }
             catch { }
@@ -388,40 +388,40 @@ namespace LogCollector
         private static Dictionary<int, string> Build()
         {
             Dictionary<int, string> d = new Dictionary<int, string>();
-            d[41] = "系统未正常关机（断电/死机/长按电源）";
-            d[1001] = "蓝屏 BugCheck 记录";
-            d[6008] = "上一次关机是意外的";
-            d[1074] = "有程序或用户发起了关机/重启";
-            d[42] = "系统进入睡眠";
-            d[107] = "系统从睡眠恢复";
-            d[506] = "进入现代待机（S0ix）";
-            d[507] = "退出现代待机";
-            d[17] = "WHEA：已纠正的硬件错误";
-            d[18] = "WHEA：致命硬件错误";
-            d[19] = "WHEA：已纠正的硬件错误（内存/PCIe）";
-            d[47] = "WHEA：已纠正的硬件错误";
-            d[219] = "驱动加载失败";
-            d[411] = "设备未能启动";
-            d[7000] = "服务启动失败";
-            d[7001] = "依赖服务或组启动失败";
-            d[7009] = "服务启动超时";
-            d[7011] = "服务事务超时";
-            d[7031] = "服务意外终止";
-            d[7034] = "服务意外终止";
-            d[4101] = "显示驱动停止响应并已恢复（TDR）";
-            d[37] = "固件限制了处理器性能（降频）";
-            d[7] = "磁盘存在坏块";
-            d[11] = "磁盘控制器错误";
-            d[51] = "分页操作错误";
-            d[129] = "存储设备被重置";
-            d[55] = "文件系统结构损坏";
-            d[98] = "文件系统损坏";
-            d[140] = "文件系统损坏";
-            d[1000] = "应用崩溃";
-            d[1002] = "应用无响应";
-            d[1026] = ".NET 未处理异常";
-            d[10016] = "DCOM 权限不足";
-            d[36] = "时间同步失败";
+            d[41] = "Unexpected shutdown (power loss / hang / power button)";
+            d[1001] = "Blue screen (BugCheck) recorded";
+            d[6008] = "Previous shutdown was unexpected";
+            d[1074] = "Shutdown or restart initiated by a program or user";
+            d[42] = "Entered sleep";
+            d[107] = "Resumed from sleep";
+            d[506] = "Entered Modern Standby (S0ix)";
+            d[507] = "Exited Modern Standby";
+            d[17] = "WHEA: corrected hardware error";
+            d[18] = "WHEA: fatal hardware error";
+            d[19] = "WHEA: corrected hardware error (memory/PCIe)";
+            d[47] = "WHEA: corrected hardware error";
+            d[219] = "Driver failed to load";
+            d[411] = "Device failed to start";
+            d[7000] = "Service failed to start";
+            d[7001] = "Dependent service or group failed to start";
+            d[7009] = "Service start timed out";
+            d[7011] = "Service transaction timed out";
+            d[7031] = "Service terminated unexpectedly";
+            d[7034] = "Service terminated unexpectedly";
+            d[4101] = "Display driver stopped responding and recovered (TDR)";
+            d[37] = "Processor performance limited by firmware (throttling)";
+            d[7] = "Disk has bad blocks";
+            d[11] = "Disk controller error";
+            d[51] = "Paging operation error";
+            d[129] = "Storage device was reset";
+            d[55] = "File system structure corruption";
+            d[98] = "File system corruption";
+            d[140] = "File system corruption";
+            d[1000] = "Application crash";
+            d[1002] = "Application hang";
+            d[1026] = ".NET unhandled exception";
+            d[10016] = "DCOM permission denied";
+            d[36] = "Time synchronization failed";
             return d;
         }
 
@@ -429,24 +429,24 @@ namespace LogCollector
         {
             if (log == "Application")
             {
-                if (id == 1001) return "应用错误报告（WER）";
-                if (id == 1000) return "应用崩溃";
-                if (id == 1002) return "应用无响应";
-                if (id == 1026) return ".NET 未处理异常";
+                if (id == 1001) return "Application error report (WER)";
+                if (id == 1000) return "Application crash";
+                if (id == 1002) return "Application hang";
+                if (id == 1026) return ".NET unhandled exception";
             }
             string s;
             if (_map.TryGetValue(id, out s) && s != null && s.Length > 0) return s;
             if (provider != null && provider.IndexOf("Display", StringComparison.OrdinalIgnoreCase) >= 0)
-                return "显示相关事件";
+                return "Display-related event";
             return "";
         }
 
         public static string LevelText(string level)
         {
             if (level == null) return "";
-            if (level.IndexOf("错误", StringComparison.Ordinal) >= 0 || level.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0) return "错误";
-            if (level.IndexOf("警告", StringComparison.Ordinal) >= 0 || level.IndexOf("Warning", StringComparison.OrdinalIgnoreCase) >= 0) return "警告";
-            if (level.IndexOf("信息", StringComparison.Ordinal) >= 0 || level.IndexOf("Information", StringComparison.OrdinalIgnoreCase) >= 0) return "信息";
+            if (level.IndexOf("错误", StringComparison.Ordinal) >= 0 || level.IndexOf("Error", StringComparison.OrdinalIgnoreCase) >= 0) return "Error";
+            if (level.IndexOf("警告", StringComparison.Ordinal) >= 0 || level.IndexOf("Warning", StringComparison.OrdinalIgnoreCase) >= 0) return "Warning";
+            if (level.IndexOf("信息", StringComparison.Ordinal) >= 0 || level.IndexOf("Information", StringComparison.OrdinalIgnoreCase) >= 0) return "Information";
             return level;
         }
 

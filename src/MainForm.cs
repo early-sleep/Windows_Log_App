@@ -38,7 +38,7 @@ namespace LogCollector
         // ------------------------------------------------------------ UI
         private void BuildUi()
         {
-            Text = "笔记本日志采集工具  v" + Program.Version;
+            Text = "Laptop Log Collector  v" + Program.Version;
             Size = new Size(1080, 800);
             MinimumSize = new Size(980, 700);
             StartPosition = FormStartPosition.CenterScreen;
@@ -55,14 +55,14 @@ namespace LogCollector
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 240));
             root.BackColor = Bg;
 
-            // ---------- 顶栏 ----------
+            // ---------- header ----------
             Panel top = new Panel();
             top.Dock = DockStyle.Fill;
             top.BackColor = Dark;
             top.Margin = new Padding(0);
 
             Label title = new Label();
-            title.Text = "笔记本日志采集工具";
+            title.Text = "Laptop Log Collector";
             title.ForeColor = Color.White;
             title.Font = new Font("Microsoft YaHei UI", 15F, FontStyle.Bold);
             title.AutoSize = true;
@@ -70,14 +70,14 @@ namespace LogCollector
             top.Controls.Add(title);
 
             Label sub = new Label();
-            sub.Text = "选择需要采集的内容，生成可直接交给研发的日志包与 HTML 报告";
+            sub.Text = "Select what to collect, then hand the package and HTML report to engineering";
             sub.ForeColor = Color.FromArgb(178, 196, 224);
             sub.AutoSize = true;
             sub.Location = new Point(22, 46);
             top.Controls.Add(sub);
 
             _lblMachine = new Label();
-            _lblMachine.Text = "正在读取机器信息…";
+            _lblMachine.Text = "Reading machine information...";
             _lblMachine.ForeColor = Color.FromArgb(210, 222, 240);
             _lblMachine.AutoSize = false;
             _lblMachine.TextAlign = ContentAlignment.MiddleRight;
@@ -92,8 +92,8 @@ namespace LogCollector
             _lblAdmin.Size = new Size(330, 20);
             top.Controls.Add(_lblAdmin);
 
-            _btnElevate = MakeSmallButton("以管理员身份重启", Color.FromArgb(72, 98, 145));
-            _btnElevate.Size = new Size(140, 24);
+            _btnElevate = MakeSmallButton("Restart as administrator", Color.FromArgb(72, 98, 145));
+            _btnElevate.Size = new Size(178, 24);
             _btnElevate.Visible = false;
             _btnElevate.Click += delegate
             {
@@ -105,14 +105,14 @@ namespace LogCollector
                     Process.Start(psi);
                     Close();
                 }
-                catch (Exception ex) { MessageBox.Show(this, "提权失败：" + ex.Message, "提示"); }
+                catch (Exception ex) { MessageBox.Show(this, "Elevation failed: " + ex.Message, "Notice"); }
             };
             top.Controls.Add(_btnElevate);
 
             top.Resize += delegate { LayoutTop(top); };
             LayoutTop(top);
 
-            // ---------- 中部 ----------
+            // ---------- middle ----------
             TableLayoutPanel mid = new TableLayoutPanel();
             mid.Dock = DockStyle.Fill;
             mid.ColumnCount = 2;
@@ -130,21 +130,21 @@ namespace LogCollector
             _scrollPanels.Add(left);
 
             int y = 0;
-            // 快捷按钮
+            // quick buttons
             Panel quick = new Panel();
             quick.Location = new Point(0, 0);
             quick.Size = new Size(600, 30);
-            Button bAll = MakeSmallButton("全选", Accent);
+            Button bAll = MakeSmallButton("Select all", Accent);
             bAll.Location = new Point(0, 0); bAll.Size = new Size(64, 26);
             bAll.Click += delegate { SetAll(true); };
-            Button bNone = MakeSmallButton("全不选", Color.Gray);
+            Button bNone = MakeSmallButton("Clear all", Color.Gray);
             bNone.Location = new Point(72, 0); bNone.Size = new Size(72, 26);
             bNone.Click += delegate { SetAll(false); };
-            Button bDef = MakeSmallButton("恢复默认", Color.Gray);
+            Button bDef = MakeSmallButton("Restore defaults", Color.Gray);
             bDef.Location = new Point(152, 0); bDef.Size = new Size(82, 26);
             bDef.Click += delegate { ResetDefault(); };
             Label tip = new Label();
-            tip.Text = "勾选需要采集的内容（蓝色为默认推荐）";
+            tip.Text = "Tick what to collect (blue titles are recommended defaults)";
             tip.AutoSize = true;
             tip.ForeColor = Color.Gray;
             tip.Location = new Point(248, 5);
@@ -207,7 +207,7 @@ namespace LogCollector
             _scrollPanels.Add(right);
 
             Label rt = new Label();
-            rt.Text = "现场信息（选填，会写进报告）";
+            rt.Text = "Test context (optional, written into the report)";
             rt.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
             rt.ForeColor = Dark;
             rt.AutoSize = true;
@@ -215,12 +215,12 @@ namespace LogCollector
             right.Controls.Add(rt);
 
             int ry = 44;
-            ry = AddField(right, "用例编号", ref _txtCase, ry, false);
-            ry = AddField(right, "采集人", ref _txtOperator, ry, false);
+            ry = AddField(right, "Case ID", ref _txtCase, ry, false);
+            ry = AddField(right, "Collected by", ref _txtOperator, ry, false);
             _txtOperator.Text = Environment.UserName;
 
             Label ls = new Label();
-            ls.Text = "现象描述";
+            ls.Text = "Symptom description";
             ls.AutoSize = true;
             ls.ForeColor = Color.FromArgb(71, 85, 105);
             ls.Location = new Point(16, ry);
@@ -237,7 +237,7 @@ namespace LogCollector
             ry += 128;
 
             Label la = new Label();
-            la.Text = "附加日志目录（勾选「附加日志目录」时生效）";
+            la.Text = "Extra log folder (used when the item is ticked)";
             la.AutoSize = true;
             la.ForeColor = Color.FromArgb(71, 85, 105);
             la.Location = new Point(16, ry);
@@ -248,21 +248,21 @@ namespace LogCollector
             _txtAppDir.Size = new Size(268, 24);
             _txtAppDir.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             right.Controls.Add(_txtAppDir);
-            Button bPick = MakeSmallButton("浏览…", Color.Gray);
+            Button bPick = MakeSmallButton("Browse...", Color.Gray);
             bPick.Size = new Size(80, 24);
             bPick.Location = new Point(292, ry + 22);
             bPick.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             bPick.Click += delegate
             {
                 FolderBrowserDialog f = new FolderBrowserDialog();
-                f.Description = "选择被测软件的日志目录";
+                f.Description = "Select the log folder of the application under test";
                 if (f.ShowDialog(this) == DialogResult.OK) _txtAppDir.Text = f.SelectedPath;
             };
             right.Controls.Add(bPick);
             ry += 60;
 
             Label lp = new Label();
-            lp.Text = "进程名（进程内存转储用，如 chrome.exe，留空取最大）";
+            lp.Text = "Process name for dump (blank = largest)";
             lp.AutoSize = true;
             lp.ForeColor = Color.FromArgb(71, 85, 105);
             lp.Location = new Point(16, ry);
@@ -276,7 +276,7 @@ namespace LogCollector
             ry += 56;
 
             Label hint = new Label();
-            hint.Text = "提示：\r\n· 采集期间请勿操作电脑，尤其是性能与能耗类采集。\r\n· 蓝屏问题请勾选「蓝屏转储」，并在重启后立即采集。\r\n· 部分项目需要管理员权限，普通用户运行时会被标记为跳过。";
+            hint.Text = "Notes:\r\n- Do not use the machine while collecting, especially performance and energy items.\r\n- For BSOD issues tick \"Blue screen dumps\" and collect right after the reboot.\r\n- Some items need administrator rights; without them they are marked as skipped.";
             hint.AutoSize = false;
             hint.Size = new Size(360, 110);
             hint.Location = new Point(16, ry);
@@ -287,14 +287,14 @@ namespace LogCollector
             mid.Controls.Add(left, 0, 0);
             mid.Controls.Add(right, 1, 0);
 
-            // ---------- 底部 ----------
+            // ---------- footer ----------
             Panel bottom = new Panel();
             bottom.Dock = DockStyle.Fill;
             bottom.BackColor = Color.White;
             bottom.Margin = new Padding(0);
 
             Label lo = new Label();
-            lo.Text = "输出目录";
+            lo.Text = "Output folder";
             lo.AutoSize = true;
             lo.ForeColor = Color.FromArgb(71, 85, 105);
             lo.Location = new Point(16, 14);
@@ -303,29 +303,29 @@ namespace LogCollector
             _txtOut = new TextBox();
             _txtOut.Location = new Point(80, 11);
             _txtOut.Size = new Size(560, 24);
-            _txtOut.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "日志采集");
+            _txtOut.Text = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "LogCollection");
             _txtOut.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             bottom.Controls.Add(_txtOut);
 
-            _btnStart = MakeButton("开始采集", Accent, Color.White);
+            _btnStart = MakeButton("Start collection", Accent, Color.White);
             _btnStart.Size = new Size(120, 34);
             _btnStart.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _btnStart.Click += delegate { StartCollect(); };
             bottom.Controls.Add(_btnStart);
 
-            _btnStop = MakeButton("停止", Color.FromArgb(220, 38, 38), Color.White);
+            _btnStop = MakeButton("Stop", Color.FromArgb(220, 38, 38), Color.White);
             _btnStop.Size = new Size(72, 34);
             _btnStop.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _btnStop.Click += delegate
             {
                 if (_cts != null) _cts.Cancel();
                 EnableButton(_btnStop, false, Color.FromArgb(220, 38, 38));
-                SetStatus("正在停止…");
+                SetStatus("Stopping...");
             };
             bottom.Controls.Add(_btnStop);
             EnableButton(_btnStop, false, Color.FromArgb(220, 38, 38));
 
-            _btnReport = MakeButton("查看报告", Color.FromArgb(16, 185, 129), Color.White);
+            _btnReport = MakeButton("View report", Color.FromArgb(16, 185, 129), Color.White);
             _btnReport.Size = new Size(96, 34);
             _btnReport.Enabled = false;
             _btnReport.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -333,7 +333,7 @@ namespace LogCollector
             bottom.Controls.Add(_btnReport);
             EnableButton(_btnReport, false, Color.FromArgb(16, 185, 129));
 
-            _btnOpen = MakeButton("打开文件夹", Color.FromArgb(107, 114, 128), Color.White);
+            _btnOpen = MakeButton("Open folder", Color.FromArgb(107, 114, 128), Color.White);
             _btnOpen.Size = new Size(110, 34);
             _btnOpen.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _btnOpen.Click += delegate { OpenFolder(); };
@@ -346,7 +346,7 @@ namespace LogCollector
             bottom.Controls.Add(_bar);
 
             _lblStatus = new Label();
-            _lblStatus.Text = "就绪";
+            _lblStatus.Text = "Ready";
             _lblStatus.AutoSize = true;
             _lblStatus.ForeColor = Color.FromArgb(71, 85, 105);
             _lblStatus.Location = new Point(16, 72);
@@ -452,7 +452,7 @@ namespace LogCollector
             }
         }
 
-        // ------------------------------------------------------------ 状态
+        // ------------------------------------------------------------ state
         private void LoadMachineInfo()
         {
             MachineInfo m = Tool.ReadMachine();
@@ -480,13 +480,13 @@ namespace LogCollector
         {
             if (Tool.IsElevated())
             {
-                _lblAdmin.Text = "当前：管理员权限";
+                _lblAdmin.Text = "Running as administrator";
                 _lblAdmin.ForeColor = Color.FromArgb(134, 239, 172);
                 _btnElevate.Visible = false;
             }
             else
             {
-                _lblAdmin.Text = "当前：普通用户，部分采集项不可用";
+                _lblAdmin.Text = "Standard user: some items unavailable";
                 _lblAdmin.ForeColor = Color.FromArgb(253, 224, 71);
                 _btnElevate.Visible = true;
             }
@@ -525,11 +525,11 @@ namespace LogCollector
                 _bar.Maximum = total;
                 _bar.Value = Math.Min(done, total);
             }
-            if (!string.IsNullOrEmpty(name)) SetStatus("正在采集：" + name);
-            else SetStatus("已完成 " + done + " / " + total);
+            if (!string.IsNullOrEmpty(name)) SetStatus("Collecting: " + name);
+            else SetStatus("Finished " + done + " / " + total);
         }
 
-        // ------------------------------------------------------------ 采集
+        // ------------------------------------------------------------ collection
         private void StartCollect()
         {
             if (_running) return;
@@ -541,7 +541,7 @@ namespace LogCollector
             }
             if (picked.Count == 0)
             {
-                MessageBox.Show(this, "请至少勾选一项采集内容。", "提示", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                MessageBox.Show(this, "Please select at least one item.", "Notice", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 return;
             }
             string root = _txtOut.Text.Trim();
@@ -551,15 +551,15 @@ namespace LogCollector
             }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "输出目录不可用：" + ex.Message, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Output folder unavailable: " + ex.Message, "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
             if (!Tool.IsElevated())
             {
                 DialogResult r = MessageBox.Show(this,
-                    "当前以普通用户运行，转储文件、能耗诊断、睡眠诊断等项目将无法采集。\r\n是否以管理员身份重新启动？",
-                    "权限提示", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
+                    "Running as a standard user: dump files, energy report and sleep study cannot be collected.\r\nRestart as administrator?",
+                    "Permission", MessageBoxButtons.YesNoCancel, MessageBoxIcon.Question);
                 if (r == DialogResult.Cancel) return;
                 if (r == DialogResult.Yes)
                 {
@@ -571,7 +571,7 @@ namespace LogCollector
                         Process.Start(psi);
                         Close();
                     }
-                    catch (Exception ex) { MessageBox.Show(this, "提权失败，将继续以当前权限采集。" + ex.Message, "提示"); }
+                    catch (Exception ex) { MessageBox.Show(this, "Elevation failed; continuing with current rights." + ex.Message, "Notice"); }
                     return;
                 }
             }
@@ -581,7 +581,7 @@ namespace LogCollector
             s.Info = Tool.ReadMachine();
             if (s.Info.Serial.Length == 0)
             {
-                SetStatus("正在读取设备序列号…");
+                SetStatus("Reading serial number...");
                 try { s.Info.Serial = Tool.FetchSerial(CancellationToken.None).Trim(); } catch { }
             }
             s.OperatorName = string.IsNullOrEmpty(_txtOperator.Text.Trim()) ? Environment.UserName : _txtOperator.Text.Trim();
@@ -595,7 +595,7 @@ namespace LogCollector
             try { s.OutDir = Runner.MakeOutputDir(root, tag); }
             catch (Exception ex)
             {
-                MessageBox.Show(this, "创建输出目录失败：" + ex.Message, "提示", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show(this, "Failed to create output folder: " + ex.Message, "Notice", MessageBoxButtons.OK, MessageBoxIcon.Warning);
                 return;
             }
 
@@ -611,13 +611,13 @@ namespace LogCollector
             _log.Clear();
             _bar.Value = 0;
             _bar.Maximum = picked.Count + 1;
-            AppendLog("输出目录：" + s.OutDir);
-            AppendLog("共 " + picked.Count + " 项，开始采集…");
+            AppendLog("Output folder: " + s.OutDir);
+            AppendLog(picked.Count + " item(s), starting...");
 
             Thread th = new Thread(delegate()
             {
                 try { Runner.Run(s, picked); }
-                catch (Exception ex) { AppendLog("采集异常：" + ex.Message); }
+                catch (Exception ex) { AppendLog("Collection error: " + ex.Message); }
                 finally { try { BeginInvoke(new Action(delegate { Finish(); })); } catch { } }
             });
             th.IsBackground = true;
@@ -633,11 +633,11 @@ namespace LogCollector
             EnableButton(_btnStop, false, Color.FromArgb(220, 38, 38));
             EnableButton(_btnReport, true, Color.FromArgb(16, 185, 129));
             _bar.Value = _bar.Maximum;
-            SetStatus("采集完成，报告已生成");
+            SetStatus("Collection finished, report generated");
             ResetScroll();
             DialogResult r = MessageBox.Show(this,
-                "采集完成。\r\n\r\n是否立即打开 HTML 报告？\r\n文件位置：" + _lastDir,
-                "完成", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
+                "Collection finished.\r\n\r\nOpen the HTML report now?\r\nLocation: " + _lastDir,
+                "Done", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
             if (r == DialogResult.Yes) OpenReport();
         }
 
@@ -647,9 +647,9 @@ namespace LogCollector
             {
                 string p = Path.Combine(_lastDir, "report.html");
                 if (File.Exists(p)) Process.Start(p);
-                else MessageBox.Show(this, "报告文件不存在。", "提示");
+                else MessageBox.Show(this, "Report file not found.", "Notice");
             }
-            catch (Exception ex) { MessageBox.Show(this, "打开失败：" + ex.Message, "提示"); }
+            catch (Exception ex) { MessageBox.Show(this, "Failed to open: " + ex.Message, "Notice"); }
         }
 
         private void OpenFolder()
@@ -659,9 +659,9 @@ namespace LogCollector
                 string p = _lastDir;
                 if (string.IsNullOrEmpty(p) || !Directory.Exists(p)) p = _txtOut.Text.Trim();
                 if (Directory.Exists(p)) Process.Start("explorer.exe", "\"" + p + "\"");
-                else MessageBox.Show(this, "目录不存在：" + p, "提示");
+                else MessageBox.Show(this, "Folder not found: " + p, "Notice");
             }
-            catch (Exception ex) { MessageBox.Show(this, "打开失败：" + ex.Message, "提示"); }
+            catch (Exception ex) { MessageBox.Show(this, "Failed to open: " + ex.Message, "Notice"); }
         }
 
         protected override void OnShown(EventArgs e)
@@ -669,6 +669,7 @@ namespace LogCollector
             base.OnShown(e);
             UpdateAdminState();
             ResetScroll();
+            if (_btnStart != null) _btnStart.Focus();
         }
 
         private void ResetScroll()
@@ -696,7 +697,7 @@ namespace LogCollector
         {
             if (_running)
             {
-                DialogResult r = MessageBox.Show(this, "采集尚未结束，确定要退出吗？", "确认",
+                DialogResult r = MessageBox.Show(this, "Collection is still running. Exit anyway?", "Confirm",
                     MessageBoxButtons.YesNo, MessageBoxIcon.Warning);
                 if (r != DialogResult.Yes) { e.Cancel = true; return; }
                 if (_cts != null) _cts.Cancel();

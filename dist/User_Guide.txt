@@ -1,0 +1,167 @@
+Laptop Log Collector  v1.3
+======================================================================
+
+1. What this is
+----------------------------------------------------------------------
+A one-click log collection tool for laptop testers. Tick the items you need;
+the tool copies the logs, system information, crash dumps, power and
+performance data into one folder and generates an HTML report that can be
+handed straight to engineering.
+
+No installation, no network access, no changes to system settings.
+The interface and all generated reports are in English.
+
+2. Requirements
+----------------------------------------------------------------------
+- Windows 10 / Windows 11 (64-bit), any display language
+- Portable: a single exe, no .NET / Python / runtime required
+- Run as administrator recommended (otherwise dumps, WER, energy report,
+  sleep study and Wi-Fi history are skipped)
+
+3. Three steps
+----------------------------------------------------------------------
+1) Double-click LogCollector.exe
+2) Tick what to collect (the common set is already ticked)
+3) Click "Start collection" and wait for the progress bar
+
+An "Open the HTML report now?" prompt appears when done.
+
+Avoid using the machine while collecting, especially for the performance
+and energy items.
+
+4. What each item collects
+----------------------------------------------------------------------
+[Basics]
+  System event log + key event analysis  BSOD, unexpected shutdown, driver
+                                         and hardware errors
+  Application event log                  app crashes and hangs
+  System info and hardware details       model, serial, BIOS, CPU, memory,
+                                         graphics, battery, problem devices
+  Drivers and devices                    driver versions, signing, driver
+                                         store, devices with error codes
+  Processes, services and startup        current runtime state
+  Patches and installed software         environment change history
+  msinfo32 full report (slow)            more detail, may hang (off by default)
+
+[Crashes and dumps]
+  Blue screen dumps (Minidump)           copies every .dmp in the Minidump folder
+  Application crash reports (WER)        latest 25, needs admin
+  Full memory dump (MEMORY.DMP)          only if the system already created it
+  Process memory dump (GB)               full dump of a running process
+
+[Power and battery]
+  Battery health report                  design/full capacity, cycles, drain curve
+  Power settings and wake sources        sleep/hibernate/display/disk timeouts,
+                                         lid and power button action, hybrid sleep
+  Energy report (60 s audit)             needs admin
+  Sleep study (Modern Standby)           needs admin
+
+[Performance]
+  Performance sampling (30 s)            CPU, free memory, disk busy, MHz, battery
+  Graphics and display (dxdiag)          GPU driver, display modes, TDR records
+
+[Network]
+  Network configuration snapshot         IP, routes, DNS, Wi-Fi, proxy, TCP
+  Wi-Fi connection history               connect/disconnect timeline, needs admin
+
+[Storage]
+  Disk and SMART health                  health, temperature, power-on hours, wear
+
+[Other]
+  Extra log folder                       logs of the application under test
+
+5. Output
+----------------------------------------------------------------------
+Default output folder: Desktop\LogCollection\
+Each run creates a folder named <serial>_<timestamp> containing:
+
+  report.html            start here: key findings, event timeline,
+                         hardware, battery and power settings
+  All_Content.html       every text file in one browsable page
+  Collection_Info.txt    what was collected, status and how to read it
+  10_System_Logs\        System.evtx + key_events.csv
+  11_Application_Logs\   Application.evtx + app_crash_events.csv
+  20_System_Info\        systeminfo.txt / hardware_info.csv / system_summary.txt
+  21_Drivers_Devices\    drivers.csv / driver_store.txt / problem_devices.txt
+  22_Runtime_Snapshot\   processes, services, startup items
+  23_Patches_Software\
+  30_Crash_Dumps\        blue screen dmp files
+  31_WER_Reports\
+  32_Memory_Dump\        MEMORY.DMP
+  33_Process_Dump\       process memory dump
+  40_Battery\ 41_Power_Settings\ 42_Energy_Report\ 43_Sleep_Study\
+  50_Performance\ 60_Display_GPU\ 70_Network\ 71_WLAN_Report\ 80_Storage\
+  90_App_Logs\
+
+Every folder also contains browse.html, which shows that folder's text
+content in a browser - no tools needed.
+
+"Status: Skipped" means there was nothing to collect (for example no BSOD
+has occurred). The reason is written to README.txt inside that folder.
+
+6. Why there is no GB-sized memory file
+----------------------------------------------------------------------
+Two different things produce memory dumps:
+
+1) Blue screen dumps - written by Windows itself, not by this tool.
+   Whether you get a GB-sized file depends on "Write debugging information":
+     Small memory dump    ~256 KB per crash, MEMORY.DMP is never created
+     Kernel memory dump   MEMORY.DMP, usually 1-4 GB      <- usually enough
+     Complete memory dump MEMORY.DMP, about the size of RAM
+   To change it: This PC > Properties > Advanced system settings > Startup
+   and Recovery > Settings > "Write debugging information". A reboot is
+   required, and the file only appears after the next BSOD.
+   The page file must also be large enough (system managed, or >= 16 GB),
+   otherwise writing the dump fails.
+
+2) Process memory dump - taken by this tool from a running process.
+   The file appears immediately and is roughly the size of that process's
+   memory (hundreds of MB to several GB).
+   Use it for memory leaks, hangs, freezes, "slower the longer it runs".
+   Tick "Process memory dump" and type the process name on the right
+   (e.g. chrome.exe); leave it empty to dump the largest process.
+
+If the symptom is "an app's memory keeps growing / it freezes", use 2).
+If it is "blue screen / unexpected restart", use 1) after fixing the setting.
+
+7. FAQ
+----------------------------------------------------------------------
+Q: The header says "Standard user: some items unavailable".
+A: Click "Restart as administrator", or right-click the exe and choose
+   "Run as administrator". Most items still work without admin.
+
+Q: An item shows "Skipped" - is the tool broken?
+A: No. Skipped means there was nothing to collect, for example no BSOD has
+   occurred so there is no dump. The reason is in that folder's README.txt
+   and also listed in the report.
+
+Q: No dump collected for a BSOD
+A: Check the dump setting printed in 30_Crash_Dumps\README.txt. Most often
+   the system is set to "Small memory dump" or no BSOD has occurred yet.
+
+Q: How long does a collection take?
+A: About 1.5 minutes with the default items; about 3 minutes with everything
+   (the energy report and performance sampling take a minute each).
+
+Q: What are the actual sleep / hibernate timeouts?
+A: See 41_Power_Settings\power_settings.txt or the "Power and sleep settings"
+   table in the report. AC (plugged in) and DC (battery) are listed
+   separately. "Never" means it does not trigger automatically.
+
+8. Command line
+----------------------------------------------------------------------
+LogCollector.exe /cli /out:D:\logs /jobs:events-system,sysinfo,minidump
+LogCollector.exe /cli /all /out:D:\logs /tag:SN1234567
+LogCollector.exe /cli /out:D:\logs /jobs:pdump /proc:chrome.exe
+
+Options: /cli no UI, /out output folder, /jobs comma separated item ids,
+/all every item, /tag package name prefix, /case case id,
+/symptom symptom text, /proc target process for the memory dump.
+
+9. Notes
+----------------------------------------------------------------------
+- The tool only reads data. It does not clear logs, change settings or
+  install anything.
+- Reports and logs may contain personal data (user names, paths, SSIDs).
+  Handle them according to your data classification policy.
+- Process dumps can be large; watch the free disk space.

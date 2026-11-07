@@ -17,33 +17,33 @@ namespace LogCollector
         {
             List<JobDef> list = new List<JobDef>();
 
-            list.Add(new JobDef { Id = "events-system", Category = "基础信息", Name = "系统事件日志 + 关键事件分析", Hint = "含蓝屏/异常关机/驱动/硬件错误，约 10 秒", DefaultOn = true, Run = Jobs.SystemEvents });
-            list.Add(new JobDef { Id = "events-app", Category = "基础信息", Name = "应用程序事件日志", Hint = "应用崩溃与无响应记录，约 10 秒", DefaultOn = true, Run = Jobs.AppEvents });
-            list.Add(new JobDef { Id = "sysinfo", Category = "基础信息", Name = "系统信息与硬件明细", Hint = "机型/BIOS/CPU/内存/电池/异常设备，约 15 秒", DefaultOn = true, Run = Jobs.SysInfo });
-            list.Add(new JobDef { Id = "drivers", Category = "基础信息", Name = "驱动与设备清单", Hint = "驱动版本、签名、异常设备，约 10 秒", DefaultOn = true, Run = Jobs.Drivers });
-            list.Add(new JobDef { Id = "snapshot", Category = "基础信息", Name = "进程/服务/启动项快照", Hint = "当前运行状态，约 5 秒", DefaultOn = true, Run = Jobs.Snapshot });
-            list.Add(new JobDef { Id = "software", Category = "基础信息", Name = "补丁与已安装软件", Hint = "环境变更追溯，约 5 秒", DefaultOn = true, Run = Jobs.Software });
-            list.Add(new JobDef { Id = "msinfo32", Category = "基础信息", Name = "msinfo32 完整报告（较慢）", Hint = "设备与资源信息更全，但部分机器会卡住，默认不勾选", DefaultOn = false, Run = Jobs.Msinfo32 });
+            list.Add(new JobDef { Id = "events-system", Category = "Basics", Name = "System event log + key event analysis", Hint = "BSOD, unexpected shutdown, driver and hardware errors (~10 s)", DefaultOn = true, Run = Jobs.SystemEvents });
+            list.Add(new JobDef { Id = "events-app", Category = "Basics", Name = "Application event log", Hint = "App crashes and hangs (~10 s)", DefaultOn = true, Run = Jobs.AppEvents });
+            list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info and hardware details", Hint = "Model, BIOS, CPU, memory, battery, problem devices (~15 s)", DefaultOn = true, Run = Jobs.SysInfo });
+            list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Drivers and devices", Hint = "Driver versions, signing, problem devices (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
+            list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Processes, services and startup", Hint = "Current runtime state (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
+            list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Patches and installed software", Hint = "Track environment changes (~5 s)", DefaultOn = true, Run = Jobs.Software });
+            list.Add(new JobDef { Id = "msinfo32", Category = "Basics", Name = "msinfo32 full report (slow)", Hint = "More detail, but may hang on some machines (off by default)", DefaultOn = false, Run = Jobs.Msinfo32 });
 
-            list.Add(new JobDef { Id = "minidump", Category = "崩溃与转储", Name = "蓝屏转储（Minidump）", Hint = "蓝屏必抓，约 3 秒", DefaultOn = true, Run = Jobs.MiniDump });
-            list.Add(new JobDef { Id = "wer", Category = "崩溃与转储", Name = "应用崩溃报告（WER）", Hint = "最近 25 份，约 5 秒", DefaultOn = true, Run = Jobs.Wer });
-            list.Add(new JobDef { Id = "memdump", Category = "崩溃与转储", Name = "完整内存转储（MEMORY.DMP）", Hint = "体积可达数 GB，需系统已生成该文件", DefaultOn = false, Run = Jobs.MemDump });
-            list.Add(new JobDef { Id = "pdump", Category = "崩溃与转储", Name = "进程内存转储（GB 级，可指定进程）", Hint = "内存泄漏/卡死时用，在右侧填进程名，约 10–60 秒", DefaultOn = false, Run = Jobs.ProcessDump });
+            list.Add(new JobDef { Id = "minidump", Category = "Crashes and dumps", Name = "Blue screen dumps (Minidump)", Hint = "Essential for BSOD (~3 s)", DefaultOn = true, Run = Jobs.MiniDump });
+            list.Add(new JobDef { Id = "wer", Category = "Crashes and dumps", Name = "Application crash reports (WER)", Hint = "Latest 25 reports (~5 s)", DefaultOn = true, Run = Jobs.Wer });
+            list.Add(new JobDef { Id = "memdump", Category = "Crashes and dumps", Name = "Full memory dump (MEMORY.DMP)", Hint = "Up to several GB; only if the system already created it", DefaultOn = false, Run = Jobs.MemDump });
+            list.Add(new JobDef { Id = "pdump", Category = "Crashes and dumps", Name = "Process memory dump (GB, target process)", Hint = "For leaks/hangs; enter a process name on the right (~10-60 s)", DefaultOn = false, Run = Jobs.ProcessDump });
 
-            list.Add(new JobDef { Id = "battery", Category = "电源与电池", Name = "电池健康报告", Hint = "容量/循环/健康度，约 5 秒", DefaultOn = true, Run = Jobs.Battery });
-            list.Add(new JobDef { Id = "powercfg", Category = "电源与电池", Name = "电源设置与唤醒源", Hint = "睡眠、唤醒、阻止睡眠，约 5 秒", DefaultOn = true, Run = Jobs.PowerCfg });
-            list.Add(new JobDef { Id = "energy", Category = "电源与电池", Name = "能耗诊断（60 秒采样）", Hint = "需管理员，约 60 秒", DefaultOn = false, NeedAdmin = true, Run = Jobs.Energy });
-            list.Add(new JobDef { Id = "sleepstudy", Category = "电源与电池", Name = "睡眠诊断（Modern Standby）", Hint = "需管理员，约 20 秒", DefaultOn = false, NeedAdmin = true, Run = Jobs.SleepStudy });
+            list.Add(new JobDef { Id = "battery", Category = "Power and battery", Name = "Battery health report", Hint = "Capacity, cycles, health (~5 s)", DefaultOn = true, Run = Jobs.Battery });
+            list.Add(new JobDef { Id = "powercfg", Category = "Power and battery", Name = "Power settings and wake sources", Hint = "Sleep, wake, sleep blockers (~5 s)", DefaultOn = true, Run = Jobs.PowerCfg });
+            list.Add(new JobDef { Id = "energy", Category = "Power and battery", Name = "Energy report (60 s audit)", Hint = "Requires admin (~60 s)", DefaultOn = false, NeedAdmin = true, Run = Jobs.Energy });
+            list.Add(new JobDef { Id = "sleepstudy", Category = "Power and battery", Name = "Sleep study (Modern Standby)", Hint = "Requires admin (~20 s)", DefaultOn = false, NeedAdmin = true, Run = Jobs.SleepStudy });
 
-            list.Add(new JobDef { Id = "perf", Category = "性能", Name = "性能采样（30 秒：CPU/内存/磁盘）", Hint = "约 35 秒，采样期间请勿操作", DefaultOn = false, Run = Jobs.Perf });
-            list.Add(new JobDef { Id = "gpu", Category = "性能", Name = "显卡与显示信息（dxdiag）", Hint = "含 TDR 记录，约 20 秒", DefaultOn = true, Run = Jobs.Gpu });
+            list.Add(new JobDef { Id = "perf", Category = "Performance", Name = "Performance sampling (30 s: CPU/memory/disk)", Hint = "~35 s; do not use the machine while sampling", DefaultOn = false, Run = Jobs.Perf });
+            list.Add(new JobDef { Id = "gpu", Category = "Performance", Name = "Graphics and display (dxdiag)", Hint = "Includes TDR records (~20 s)", DefaultOn = true, Run = Jobs.Gpu });
 
-            list.Add(new JobDef { Id = "netcfg", Category = "网络", Name = "网络配置快照", Hint = "IP/路由/Wi-Fi/蓝牙，约 5 秒", DefaultOn = true, Run = Jobs.NetCfg });
-            list.Add(new JobDef { Id = "wlan", Category = "网络", Name = "无线连接历史报告", Hint = "连接/断开/失败时间线，需管理员，约 25 秒", DefaultOn = true, NeedAdmin = true, Run = Jobs.WlanReport });
+            list.Add(new JobDef { Id = "netcfg", Category = "Network", Name = "Network configuration snapshot", Hint = "IP, routes, Wi-Fi, Bluetooth (~5 s)", DefaultOn = true, Run = Jobs.NetCfg });
+            list.Add(new JobDef { Id = "wlan", Category = "Network", Name = "Wi-Fi connection history", Hint = "Connect/disconnect timeline; requires admin (~25 s)", DefaultOn = true, NeedAdmin = true, Run = Jobs.WlanReport });
 
-            list.Add(new JobDef { Id = "disk", Category = "存储", Name = "磁盘与 SMART 健康", Hint = "健康度/温度/通电时间，约 5 秒", DefaultOn = true, Run = Jobs.Disk });
+            list.Add(new JobDef { Id = "disk", Category = "Storage", Name = "Disk and SMART health", Hint = "Health, temperature, power-on hours (~5 s)", DefaultOn = true, Run = Jobs.Disk });
 
-            list.Add(new JobDef { Id = "appdir", Category = "其他", Name = "附加日志目录（可指定路径）", Hint = "被测软件自己的日志", DefaultOn = false, Run = Jobs.AppDir });
+            list.Add(new JobDef { Id = "appdir", Category = "Other", Name = "Extra log folder (custom path)", Hint = "Logs of the application under test", DefaultOn = false, Run = Jobs.AppDir });
 
             return list;
         }
@@ -51,10 +51,10 @@ namespace LogCollector
 
     public static class Jobs
     {
-        // ---------------- 基础 ----------------
+        // ---------------- basics ----------------
         public static void SystemEvents(Session s)
         {
-            string dir = s.Dir("10_系统日志");
+            string dir = s.Dir("10_System_Logs");
             string o;
             Tool.Run("wevtutil.exe", "epl System " + Tool.Q(Path.Combine(dir, "System.evtx")), 180000, s.Token, out o, Encoding.Default);
 
@@ -67,7 +67,7 @@ if($null -eq $ev){
   try { $ev = Get-WinEvent -FilterHashtable @{LogName='System'; Level=1,2,3; StartTime=$start} -MaxEvents 150 -ErrorAction SilentlyContinue } catch { }
 }
 $culture = [System.Globalization.CultureInfo]::InvariantCulture
-if($null -eq $ev){ Write-Output ('# 最近 7 天未找到关键事件（系统日志可能已被清空或滚动覆盖）') }
+if($null -eq $ev){ Write-Output ('# # No key events found in the last 7 days (the system log may have been cleared or rolled over)') }
 else {
 $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
   $m = [string]$_.Message
@@ -79,13 +79,13 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
 }
 ";
             string outp = Tool.Ps(script, 180000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "关键事件.csv"), outp, new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "key_events.csv"), outp, new UTF8Encoding(true));
             ParseEvents(outp, "System", s);
         }
 
         public static void AppEvents(Session s)
         {
-            string dir = s.Dir("11_应用程序日志");
+            string dir = s.Dir("11_Application_Logs");
             string o;
             Tool.Run("wevtutil.exe", "epl Application " + Tool.Q(Path.Combine(dir, "Application.evtx")), 180000, s.Token, out o, Encoding.Default);
 
@@ -95,7 +95,7 @@ $start = (Get-Date).AddDays(-7)
 $ev = $null
 try { $ev = Get-WinEvent -FilterHashtable @{LogName='Application'; Id=$ids; StartTime=$start} -MaxEvents 150 -ErrorAction SilentlyContinue } catch { }
 $culture = [System.Globalization.CultureInfo]::InvariantCulture
-if($null -eq $ev){ Write-Output ('# 最近 7 天没有应用崩溃记录') }
+if($null -eq $ev){ Write-Output ('# # No application crashes in the last 7 days') }
 else {
 $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
   $m = [string]$_.Message
@@ -107,13 +107,13 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
 }
 ";
             string outp = Tool.Ps(script, 180000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "应用崩溃事件.csv"), outp, new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "app_crash_events.csv"), outp, new UTF8Encoding(true));
             ParseEvents(outp, "Application", s);
         }
 
         public static void SysInfo(Session s)
         {
-            string dir = s.Dir("20_系统信息");
+            string dir = s.Dir("20_System_Info");
             string o;
             string sys = Path.Combine(dir, "systeminfo.txt");
             Tool.Run("cmd.exe", "/c systeminfo > " + Tool.Q(sys), 60000, s.Token, out o, Encoding.Default);
@@ -149,11 +149,11 @@ Get-CimInstance Win32_PhysicalMemory | ForEach-Object {
   E 'MEM' ('Slot' + $_.DeviceLocator) $t
 }
 Get-CimInstance Win32_VideoController | ForEach-Object {
-  $t = '{0} / 驱动 {1} / {2}x{3} @{4}Hz' -f $_.Name, $_.DriverVersion, $_.CurrentHorizontalResolution, $_.CurrentVerticalResolution, $_.CurrentRefreshRate
+  $t = '{0} / driver {1} / {2}x{3} @{4}Hz' -f $_.Name, $_.DriverVersion, $_.CurrentHorizontalResolution, $_.CurrentVerticalResolution, $_.CurrentRefreshRate
   E 'GPU' $_.Name $t
 }
 Get-CimInstance Win32_DiskDrive | ForEach-Object {
-  $t = '{0} GB / {1} / 固件 {2}' -f [math]::Round($_.Size/1GB,0), $_.InterfaceType, $_.FirmwareRevision
+  $t = '{0} GB / {1} / Firmware {2}' -f [math]::Round($_.Size/1GB,0), $_.InterfaceType, $_.FirmwareRevision
   E 'DISK' $_.Model $t
 }
 $bat = Get-CimInstance Win32_Battery | Select-Object -First 1
@@ -167,7 +167,7 @@ E 'BAT' 'DesignedCapacity' $des
 E 'BAT' 'FullChargedCapacity' $full
 E 'BAT' 'CycleCount' $cyc
 Get-CimInstance Win32_PnPEntity | Where-Object { $_.ConfigManagerErrorCode -ne 0 } | Select-Object -First 40 | ForEach-Object {
-  E 'PNP' $_.Name ('错误码 ' + $_.ConfigManagerErrorCode)
+  E 'PNP' $_.Name ('Error code ' + $_.ConfigManagerErrorCode)
 }
 $os = Get-CimInstance Win32_OperatingSystem
 E 'OS' 'Caption' $os.Caption
@@ -177,9 +177,9 @@ E 'OS' 'Install' $os.InstallDate
 E 'OS' 'LastBoot' $os.LastBootUpTime
 ";
             string probeOut = Tool.Ps(probe, 120000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "硬件信息.csv"), probeOut, new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "hardware_info.csv"), probeOut, new UTF8Encoding(true));
             ParseProbe(probeOut, s);
-            File.WriteAllText(Path.Combine(dir, "系统摘要.txt"), ProbeSummary(s), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "system_summary.txt"), ProbeSummary(s), new UTF8Encoding(true));
         }
 
         public static void Msinfo32(Session s)
@@ -190,22 +190,22 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
             Tool.Run("msinfo32.exe", "/report " + Tool.Q(f), 45000, s.Token, out o, Encoding.Default);
             WaitFile(f, 40000, s.Token);
             if (!File.Exists(f))
-                throw new Exception("msinfo32 未能在限定时间内生成文件（该工具在部分机器上会卡住），请改用其它项目");
+                throw new Exception("msinfo32 did not produce a file in time (it hangs on some machines); use another item instead");
         }
 
         private static string ProbeSummary(Session s)
         {
             StringBuilder b = new StringBuilder();
             string[][] groups = new string[][] {
-                new string[] { "SYS", "计算机" },
-                new string[] { "BIOS", "BIOS 与序列号" },
-                new string[] { "CPU", "处理器" },
-                new string[] { "MEM", "内存" },
-                new string[] { "GPU", "显卡" },
-                new string[] { "DISK", "磁盘" },
-                new string[] { "BAT", "电池" },
-                new string[] { "PNP", "异常设备" },
-                new string[] { "OS", "操作系统" }
+                new string[] { "SYS", "Computer" },
+                new string[] { "BIOS", "BIOS and serial" },
+                new string[] { "CPU", "Processor" },
+                new string[] { "MEM", "Memory" },
+                new string[] { "GPU", "Graphics" },
+                new string[] { "DISK", "Disk" },
+                new string[] { "BAT", "Battery" },
+                new string[] { "PNP", "Problem devices" },
+                new string[] { "OS", "Operating system" }
             };
             foreach (string[] g in groups)
             {
@@ -222,55 +222,55 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
                     b.AppendLine();
                 }
             }
-            b.AppendLine("=== 采集上下文 ===");
-            b.AppendLine("  计算机名 : " + s.Info.ComputerName);
-            b.AppendLine("  登录用户 : " + s.Info.CurrentUser);
-            b.AppendLine("  运行权限 : " + (s.IsAdmin ? "管理员" : "普通用户"));
-            b.AppendLine("  系统启动 : " + s.Info.BootTime + "（已运行 " + s.Info.Uptime + "）");
+            b.AppendLine("=== Collection context ===");
+            b.AppendLine("  Computer name : " + s.Info.ComputerName);
+            b.AppendLine("  User : " + s.Info.CurrentUser);
+            b.AppendLine("  Privilege : " + (s.IsAdmin ? "Administrator" : "Standard user"));
+            b.AppendLine("  Booted at : " + s.Info.BootTime + " (up " + s.Info.Uptime + ")");
             return b.ToString();
         }
 
         public static void Drivers(Session s)
         {
-            string dir = s.Dir("21_驱动设备");
+            string dir = s.Dir("21_Drivers_Devices");
             string o;
-            Tool.Run("cmd.exe", "/c driverquery /v /fo csv > " + Tool.Q(Path.Combine(dir, "驱动清单.csv")),
+            Tool.Run("cmd.exe", "/c driverquery /v /fo csv > " + Tool.Q(Path.Combine(dir, "drivers.csv")),
                      120000, s.Token, out o, Encoding.Default);
-            Tool.Run("cmd.exe", "/c pnputil /enum-drivers > " + Tool.Q(Path.Combine(dir, "驱动库.txt")),
+            Tool.Run("cmd.exe", "/c pnputil /enum-drivers > " + Tool.Q(Path.Combine(dir, "driver_store.txt")),
                      120000, s.Token, out o, Encoding.Default);
             string ps = @"Get-PnpDevice | Where-Object { $_.Status -ne 'OK' } | Select-Object Status,Class,FriendlyName,InstanceId | Format-Table -AutoSize | Out-String -Width 300";
             string outp = Tool.Ps(ps, 90000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "异常设备.txt"), outp, new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "problem_devices.txt"), outp, new UTF8Encoding(true));
         }
 
         public static void Snapshot(Session s)
         {
-            string dir = s.Dir("22_运行状态");
+            string dir = s.Dir("22_Runtime_Snapshot");
             string ps = @"
-'=== 进程 TOP 30（按内存） ==='
-Get-Process | Sort-Object WS -Descending | Select-Object -First 30 Name,Id,@{n='CPU秒';e={[math]::Round($_.CPU,1)}},@{n='内存MB';e={[math]::Round($_.WS/1MB,0)}},Handles,Threads | Format-Table -AutoSize | Out-String -Width 300
-'=== 非运行状态的服务 ==='
+'=== Top 30 processes by memory ==='
+Get-Process | Sort-Object WS -Descending | Select-Object -First 30 Name,Id,@{n='CPU_s';e={[math]::Round($_.CPU,1)}},@{n='MemMB';e={[math]::Round($_.WS/1MB,0)}},Handles,Threads | Format-Table -AutoSize | Out-String -Width 300
+'=== Services not running ==='
 Get-Service | Where-Object { $_.Status -ne 'Running' } | Select-Object Status,StartType,Name,DisplayName | Format-Table -AutoSize | Out-String -Width 300
-'=== 启动项 ==='
+'=== Startup items ==='
 Get-CimInstance Win32_StartupCommand | Select-Object Name,Command,Location | Format-Table -AutoSize | Out-String -Width 300
-'=== 计划任务（非微软） ==='
+'=== Scheduled tasks (non-Microsoft) ==='
 Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Select-Object TaskName,State | Format-Table -AutoSize | Out-String -Width 300
 ";
             string outp = Tool.Ps(ps, 120000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "进程服务启动项.txt"), outp, new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "processes_services_startup.txt"), outp, new UTF8Encoding(true));
         }
 
         public static void Software(Session s)
         {
-            string dir = s.Dir("23_补丁与软件");
+            string dir = s.Dir("23_Patches_Software");
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("=== 已安装补丁 ===");
+            sb.AppendLine("=== Installed updates ===");
             string ps = @"Get-HotFix | Sort-Object InstalledOn -Descending | Select-Object -First 30 HotFixID,Description,InstalledOn | Format-Table -AutoSize | Out-String -Width 200";
             sb.AppendLine(Tool.Ps(ps, 60000, s.Token));
             sb.AppendLine();
-            sb.AppendLine("=== 已安装软件 ===");
+            sb.AppendLine("=== Installed software ===");
             sb.AppendLine(ReadInstalledApps());
-            File.WriteAllText(Path.Combine(dir, "补丁与软件.txt"), sb.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "patches_and_software.txt"), sb.ToString(), new UTF8Encoding(true));
         }
 
         private static string ReadInstalledApps()
@@ -314,10 +314,10 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             return sb.ToString();
         }
 
-        // ---------------- 崩溃 ----------------
+        // ---------------- crashes ----------------
         public static void MiniDump(Session s)
         {
-            string dir = s.Dir("30_崩溃转储");
+            string dir = s.Dir("30_Crash_Dumps");
             string src = @"C:\Windows\Minidump";
             int n = 0;
             long bytes = 0;
@@ -325,7 +325,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             long free = 0;
             try { free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dir))).AvailableFreeSpace; }
             catch { }
-            const long Reserve = 2L * 1024 * 1024 * 1024;   // 目标盘至少留 2GB
+            const long Reserve = 2L * 1024 * 1024 * 1024;   // keep at least 2 GB free on the target drive
 
             if (Directory.Exists(src))
             {
@@ -342,12 +342,12 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                     FileInfo fi = files[i];
                     if (free > 0 && fi.Length + Reserve > free)
                     {
-                        skipped.Add(fi.FullName + "（" + Tool.FmtSize(fi.Length) + "，目标盘剩余空间不足）");
-                        s.Log("  · 空间不足，未复制 " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "）");
+                        skipped.Add(fi.FullName + "（" + Tool.FmtSize(fi.Length) + ", not enough free space on target)");
+                        s.Log("  · Not enough space, skipped " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "）");
                         continue;
                     }
                     if (fi.Length > 2L * 1024 * 1024 * 1024)
-                        s.Log("  · 正在复制大文件 " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "），可能需要几分钟…");
+                        s.Log("  · Copying large file " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "), this may take several minutes...");
                     try
                     {
                         string dst = Path.Combine(dir, fi.Name);
@@ -358,7 +358,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                     }
                     catch (Exception ex)
                     {
-                        skipped.Add(fi.FullName + "（复制失败：" + ex.Message + "）");
+                        skipped.Add(fi.FullName + " (copy failed: " + ex.Message + "）");
                     }
                 }
             }
@@ -366,25 +366,25 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             if (skipped.Count > 0)
             {
                 StringBuilder note = new StringBuilder();
-                note.AppendLine("以下转储文件没有复制到采集包中，原始文件仍在系统里，需要时可手工复制：");
+                note.AppendLine("The following dump files were NOT copied. They still exist on the system; copy them manually if needed:");
                 foreach (string t in skipped) note.AppendLine("  " + t);
-                File.WriteAllText(Path.Combine(dir, "未复制的大文件.txt"), note.ToString(), new UTF8Encoding(true));
+                File.WriteAllText(Path.Combine(dir, "skipped_large_files.txt"), note.ToString(), new UTF8Encoding(true));
             }
 
             if (n == 0)
             {
                 string reason = skipped.Count > 0
-                    ? "转储文件过大或复制失败，未复制（详见 30_崩溃转储\\未复制的大文件.txt）"
-                    : "系统里没有蓝屏转储文件（" + DumpModeName() + "，近 30 天无蓝屏记录）";
-                if (skipped.Count == 0) WriteNothing(dir, "本次没有找到蓝屏小型转储文件。\r\n\r\n" + DumpPolicy());
-                s.Log("  · 未复制任何转储文件");
+                    ? "Dump file too large or copy failed; see 30_Crash_Dumps\\skipped_large_files.txt"
+                    : "No blue screen dump on this system (" + DumpModeName() + ", no BSOD in the last 30 days)";
+                if (skipped.Count == 0) WriteNothing(dir, "No minidump files were found.\r\n\r\n" + DumpPolicy());
+                s.Log("  · No dump file copied");
                 throw new SkippedException(reason);
             }
-            s.Log("  · 已复制 " + n + " 个转储文件，" + Tool.FmtSize(bytes)
-                  + (skipped.Count > 0 ? "（另有 " + skipped.Count + " 个未复制）" : ""));
+            s.Log("  · Copied " + n + " dump file(s), " + Tool.FmtSize(bytes)
+                  + (skipped.Count > 0 ? " (" + skipped.Count + " not copied)" : ""));
         }
 
-        /// <summary>读取当前系统的转储设置，返回可读说明。</summary>
+        /// <summary>Reads the current dump configuration and returns a readable summary.</summary>
         public static string DumpPolicy()
         {
             StringBuilder b = new StringBuilder();
@@ -397,22 +397,22 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                     {
                         object v = k.GetValue("CrashDumpEnabled");
                         if (v != null) mode = Convert.ToInt32(v);
-                        b.AppendLine("当前转储设置：" + ModeName(mode));
-                        b.AppendLine("MEMORY.DMP 路径：" + k.GetValue("DumpFile"));
-                        b.AppendLine("Minidump 路径：" + k.GetValue("MinidumpDir"));
+                        b.AppendLine("Current dump setting: " + ModeName(mode));
+                        b.AppendLine("MEMORY.DMP path: " + k.GetValue("DumpFile"));
+                        b.AppendLine("Minidump path: " + k.GetValue("MinidumpDir"));
                     }
                 }
             }
             catch { }
-            b.AppendLine("物理内存：" + s_Ram + " GB");
+            b.AppendLine("Physical memory: " + s_Ram + " GB");
             try
             {
                 foreach (CimLite p in PageFiles())
-                    b.AppendLine("页面文件：" + p.Name + " " + p.SizeMB + " MB");
+                    b.AppendLine("Page file: " + p.Name + " " + p.SizeMB + " MB");
             }
             catch { }
             b.AppendLine();
-            b.AppendLine("判断：" + ModeAdvice(mode));
+            b.AppendLine("Assessment: " + ModeAdvice(mode));
             return b.ToString();
         }
 
@@ -445,12 +445,12 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         {
             switch (mode)
             {
-                case 0: return "无（蓝屏后不写任何转储）";
-                case 1: return "完全内存转储（MEMORY.DMP，约等于物理内存大小）";
-                case 2: return "内核内存转储（MEMORY.DMP，通常 1–4 GB）";
-                case 3: return "小内存转储（Minidump，每个约 256 KB）";
-                case 7: return "自动内存转储（MEMORY.DMP，由系统决定大小）";
-                default: return "未知（" + mode + "）";
+                case 0: return "None (no dump is written on BSOD)";
+                case 1: return "Complete memory dump (MEMORY.DMP, about the size of RAM)";
+                case 2: return "Kernel memory dump (MEMORY.DMP, usually 1-4 GB)";
+                case 3: return "Small memory dump (Minidump, about 256 KB each)";
+                case 7: return "Automatic memory dump (MEMORY.DMP, size chosen by Windows)";
+                default: return "Unknown (" + mode + ")";
             }
         }
 
@@ -465,50 +465,50 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 }
             }
             catch { }
-            return "转储设置未知";
+            return "Unknown dump setting";
         }
 
         private static string ModeAdvice(int mode)
         {
             if (mode == 3)
-                return "当前是「小内存转储」，每次蓝屏只生成约 256 KB 的 Minidump，系统永远不会产生 MEMORY.DMP。"
-                     + "如果你需要 GB 级的完整内存转储，必须把「写入调试信息」改成「内核内存转储」或「完全内存转储」。";
+                return "Currently set to Small memory dump: each BSOD produces only a ~256 KB Minidump, and MEMORY.DMP is never created."
+                     + " To get a GB-sized full dump, change \"Write debugging information\" to Kernel or Complete memory dump.";
             if (mode == 0)
-                return "当前未开启转储，蓝屏后不会留下任何文件。请把「写入调试信息」改为「小内存转储」或更高。";
+                return "Dumps are disabled; a BSOD leaves no file. Set \"Write debugging information\" to Small memory dump or higher.";
             if (mode == 1 || mode == 2 || mode == 7)
-                return "转储设置正确，但本机还没有产生转储文件：要么还没蓝屏过，要么转储写入失败（页面文件不够大时常见）。";
-            return "无法识别当前转储设置。";
+                return "The dump setting looks correct, but no dump exists yet: either no BSOD has occurred, or writing the dump failed (common when the page file is too small).";
+            return "Unable to identify the current dump setting.";
         }
 
         public static void MemDump(Session s)
         {
-            string dir = s.Dir("32_内存转储");
+            string dir = s.Dir("32_Memory_Dump");
             string src = @"C:\Windows\MEMORY.DMP";
             if (!File.Exists(src))
             {
-                WriteNothing(dir, "本次没有找到完整内存转储 MEMORY.DMP。\r\n\r\n" + DumpPolicy());
-                s.Log("  · 没有 MEMORY.DMP（" + DumpModeName() + "）");
-                throw new SkippedException("系统里没有 MEMORY.DMP 文件：" + DumpModeName()
-                    + "。详见 32_内存转储\\说明.txt 中的判断与修改建议");
+                WriteNothing(dir, "No MEMORY.DMP found on this system.\r\n\r\n" + DumpPolicy());
+                s.Log("  · No MEMORY.DMP (" + DumpModeName() + "）");
+                throw new SkippedException("MEMORY.DMP does not exist: " + DumpModeName()
+                    + "; see 32_Memory_Dump\\README.txt for details");
             }
             FileInfo fi = new FileInfo(src);
             if (fi.Length > 12L * 1024 * 1024 * 1024)
             {
-                WriteNothing(dir, "MEMORY.DMP 超过 12 GB，已跳过以避免磁盘写满。需要时请手工复制：" + src);
-                throw new SkippedException("MEMORY.DMP 超过 12 GB，已跳过（需手工复制）");
+                WriteNothing(dir, "MEMORY.DMP exceeds 12 GB; skipped to avoid filling the disk. Copy manually if needed: " + src);
+                throw new SkippedException("MEMORY.DMP exceeds 12 GB; skipped (copy manually)");
             }
             try
             {
                 File.Copy(src, Path.Combine(dir, "MEMORY.DMP"), true);
-                s.Log("  · 已复制 MEMORY.DMP，" + Tool.FmtSize(fi.Length));
+                s.Log("  · Copied MEMORY.DMP, " + Tool.FmtSize(fi.Length));
             }
-            catch (Exception ex) { throw new Exception("复制 MEMORY.DMP 失败：" + ex.Message); }
+            catch (Exception ex) { throw new Exception("Failed to copy MEMORY.DMP: " + ex.Message); }
         }
 
-        /// <summary>对指定进程生成完整内存转储（GB 级），用于内存泄漏 / 卡死 / 挂起类问题。</summary>
+        /// <summary>Full memory dump of a process (GB sized) for leaks, hangs and freezes.</summary>
         public static void ProcessDump(Session s)
         {
-            string dir = s.Dir("33_进程转储");
+            string dir = s.Dir("33_Process_Dump");
             string name = (s.ProcessName ?? "").Trim();
             if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
                 name = name.Substring(0, name.Length - 4);
@@ -524,23 +524,23 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                     }
                     catch { }
                 }
-                if (target == null) throw new SkippedException("没有找到可以转储的进程");
-                s.Log("  · 未指定进程名，取内存占用最大的：" + target.ProcessName + " (" + target.Id + ")");
+                if (target == null) throw new SkippedException("No process available to dump");
+                s.Log("  · No process name given; using the largest one: " + target.ProcessName + " (" + target.Id + ")");
             }
             else
             {
                 Process[] arr = Process.GetProcessesByName(name);
-                if (arr.Length == 0) throw new SkippedException("未找到进程：" + name + "（请确认进程名，例如 chrome）");
+                if (arr.Length == 0) throw new SkippedException("Process not found: " + name + " (check the name, e.g. chrome)");
                 target = arr[0];
-                if (arr.Length > 1) s.Log("  · 找到 " + arr.Length + " 个同名进程，转储第一个（PID " + target.Id + "）");
+                if (arr.Length > 1) s.Log("  · Found " + arr.Length + " processes with that name; dumping the first (PID " + target.Id + "）");
             }
 
             long ws = 0;
             try { ws = target.WorkingSet64; } catch { }
             if (ws > 12L * 1024 * 1024 * 1024)
-                throw new SkippedException("目标进程占用 " + Tool.FmtSize(ws) + "，超出 12 GB 上限，已跳过");
+                throw new SkippedException("Target process uses " + Tool.FmtSize(ws) + ", above the 12 GB limit; skipped");
             if (ws > 1L * 1024 * 1024 * 1024)
-                s.Log("  · 目标进程占用 " + Tool.FmtSize(ws) + "，转储可能持续数十秒");
+                s.Log("  · Target process uses " + Tool.FmtSize(ws) + "; dumping may take tens of seconds");
 
             string file = Path.Combine(dir, Runner.SafeName(target.ProcessName) + "_" + target.Id + "_"
                                       + DateTime.Now.ToString("HHmmss") + ".dmp");
@@ -558,17 +558,17 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             }
             catch (Exception ex)
             {
-                throw new Exception("生成进程转储失败：" + ex.Message + "（通常需要管理员权限，或进程受保护）");
+                throw new Exception("Failed to create process dump: " + ex.Message + " (usually needs admin rights, or the process is protected)");
             }
             if (!ok)
             {
                 try { File.Delete(file); } catch { }
-                throw new Exception("写入进程转储失败，错误码 " + err + "（进程受保护或权限不足，请以管理员运行）");
+                throw new Exception("Failed to write process dump, error " + err + " (protected process or insufficient rights; run as administrator)");
             }
             long size = 0;
             try { size = new FileInfo(file).Length; } catch { }
-            if (size == 0) throw new Exception("转储文件为空，请以管理员身份重试");
-            s.Log("  · 已生成 " + Path.GetFileName(file) + "，" + Tool.FmtSize(size));
+            if (size == 0) throw new Exception("Dump file is empty; retry as administrator");
+            s.Log("  · Created " + Path.GetFileName(file) + "，" + Tool.FmtSize(size));
         }
 
         [System.Runtime.InteropServices.DllImport("dbghelp.dll", SetLastError = true)]
@@ -577,7 +577,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
 
         public static void Wer(Session s)
         {
-            string dir = s.Dir("31_应用崩溃报告");
+            string dir = s.Dir("31_WER_Reports");
             string[] roots = new string[] {
                 @"C:\ProgramData\Microsoft\Windows\WER\ReportArchive",
                 @"C:\ProgramData\Microsoft\Windows\WER\ReportQueue"
@@ -603,27 +603,27 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             {
                 if (!s.IsAdmin)
                 {
-                    WriteNothing(dir, "未能复制 WER 崩溃报告。该目录（C:\\ProgramData\\Microsoft\\Windows\\WER）通常需要管理员权限，请以管理员身份重新运行。");
-                    s.Log("  · 未能读取 WER 目录（需要管理员权限）");
-                    throw new SkippedException("需要管理员权限才能读取 WER 目录");
+                    WriteNothing(dir, "Could not copy WER reports. C:\\ProgramData\\Microsoft\\Windows\\WER usually requires administrator rights; please re-run as administrator.");
+                    s.Log("  · Cannot read the WER folder (requires admin)");
+                    throw new SkippedException("Administrator rights are required to read the WER folder");
                 }
-                WriteNothing(dir, "WER 目录中没有找到崩溃报告（该机器近期没有应用崩溃）。");
-                s.Log("  · WER 目录为空");
-                throw new SkippedException("WER 目录中没有崩溃报告（近期没有应用崩溃）");
+                WriteNothing(dir, "No crash reports in the WER folder (no recent application crashes).");
+                s.Log("  · WER folder is empty");
+                throw new SkippedException("No crash reports in the WER folder (no recent app crashes)");
             }
-            s.Log("  · 已复制 " + copied + " 份崩溃报告，" + Tool.FmtSize(bytes));
+            s.Log("  · Copied " + copied + " crash report(s), " + Tool.FmtSize(bytes));
         }
 
-        // ---------------- 电源 ----------------
+        // ---------------- power ----------------
         public static void Battery(Session s)
         {
-            string dir = s.Dir("40_电源电池");
+            string dir = s.Dir("40_Battery");
             string o;
-            string f = Path.Combine(dir, "电池报告.html");
+            string f = Path.Combine(dir, "battery_report.html");
             int rc = Tool.Run("powercfg.exe", "/batteryreport /output " + Tool.Q(f) + " /duration 14",
                               120000, s.Token, out o, Encoding.Default);
             WaitFile(f, 20000, s.Token);
-            if (!File.Exists(f)) throw new Exception("电池报告生成失败：" + Trim(o, 200));
+            if (!File.Exists(f)) throw new Exception("Failed to generate the battery report: " + Trim(o, 200));
             ParseBatteryReport(f, s);
         }
 
@@ -647,15 +647,15 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
 
         public static void PowerCfg(Session s)
         {
-            string dir = s.Dir("41_电源设置");
+            string dir = s.Dir("41_Power_Settings");
             StringBuilder sb = new StringBuilder();
             string[][] cmds = new string[][] {
-                new string[] { "可用睡眠状态", "/a" },
-                new string[] { "当前电源方案", "/getactivescheme" },
-                new string[] { "阻止睡眠的请求", "/requests" },
-                new string[] { "上次唤醒源", "/lastwake" },
-                new string[] { "唤醒定时器", "/waketimers" },
-                new string[] { "可唤醒设备", "/devicequery wake_armed" }
+                new string[] { "Available sleep states", "/a" },
+                new string[] { "Active power scheme", "/getactivescheme" },
+                new string[] { "Sleep blockers", "/requests" },
+                new string[] { "Last wake source", "/lastwake" },
+                new string[] { "Wake timers", "/waketimers" },
+                new string[] { "Wake-capable devices", "/devicequery wake_armed" }
             };
             foreach (string[] c in cmds)
             {
@@ -666,33 +666,33 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 sb.AppendLine(outp);
                 sb.AppendLine();
             }
-            File.WriteAllText(Path.Combine(dir, "电源与唤醒.txt"), sb.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "power_wake.txt"), sb.ToString(), new UTF8Encoding(true));
             CollectPowerSettings(s, dir);
         }
 
-        /// <summary>需要抓取的电源设置：键、中文名、子组、设置、取值类型。</summary>
+        /// <summary>Power settings to collect: key, label, subgroup, setting, value kind.</summary>
         public static readonly string[][] PowerItems = new string[][] {
-            new string[] { "sleep",     "睡眠超时（无操作后进入睡眠）", "SUB_SLEEP",   "STANDBYIDLE",   "time" },
-            new string[] { "hibernate", "休眠超时（无操作后进入休眠）", "SUB_SLEEP",   "HIBERNATEIDLE", "time" },
-            new string[] { "monitor",   "关闭显示器",                 "SUB_VIDEO",   "VIDEOIDLE",     "time" },
-            new string[] { "disk",      "关闭硬盘",                   "SUB_DISK",    "DISKIDLE",      "time" },
-            new string[] { "unattend",  "无人参与系统睡眠",           "SUB_SLEEP",   "UNATTENDSLEEP", "time" },
-            new string[] { "lid",       "合上盖子时",                 "SUB_BUTTONS", "LIDACTION",     "action" },
-            new string[] { "powerbtn",  "按电源按钮时",               "SUB_BUTTONS", "PBUTTONACTION", "action" },
-            new string[] { "hybrid",    "混合睡眠",                   "SUB_SLEEP",   "HYBRIDSLEEP",   "bool" }
+            new string[] { "sleep",     "Sleep timeout (idle before sleep)", "SUB_SLEEP",   "STANDBYIDLE",   "time" },
+            new string[] { "hibernate", "Hibernate timeout (idle before hibernate)", "SUB_SLEEP",   "HIBERNATEIDLE", "time" },
+            new string[] { "monitor",   "Turn off display",                 "SUB_VIDEO",   "VIDEOIDLE",     "time" },
+            new string[] { "disk",      "Turn off hard disk",                   "SUB_DISK",    "DISKIDLE",      "time" },
+            new string[] { "unattend",  "Unattended sleep",           "SUB_SLEEP",   "UNATTENDSLEEP", "time" },
+            new string[] { "lid",       "When lid closes",                 "SUB_BUTTONS", "LIDACTION",     "action" },
+            new string[] { "powerbtn",  "Power button action",               "SUB_BUTTONS", "PBUTTONACTION", "action" },
+            new string[] { "hybrid",    "Hybrid sleep",                   "SUB_SLEEP",   "HYBRIDSLEEP",   "bool" }
         };
 
         private static void CollectPowerSettings(Session s, string dir)
         {
             StringBuilder sb = new StringBuilder();
-            sb.AppendLine("=== 电源与睡眠超时设置 ===");
-            sb.AppendLine("（交流 = 插电源，直流 = 电池供电；数值为系统当前生效值）");
+            sb.AppendLine("=== Power and sleep timeouts ===");
+            sb.AppendLine("(AC = plugged in, DC = on battery; values are currently in effect)");
             sb.AppendLine();
-            sb.AppendLine(Pad("项目", 30) + Pad("交流(AC)", 24) + Pad("电池(DC)", 24) + "原始值");
+            sb.AppendLine(Pad("Item", 44) + Pad("AC", 22) + Pad("DC", 22) + "Raw");
             sb.AppendLine(new string('-', 92));
 
             StringBuilder csv = new StringBuilder();
-            csv.AppendLine("项目,交流AC,电池DC,交流原始值,电池原始值");
+            csv.AppendLine("Item,AC,DC,AC_raw,DC_raw");
 
             foreach (string[] item in PowerItems)
             {
@@ -710,29 +710,29 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 s.Probe["PWR." + key + "_acraw"] = ac.ToString();
                 s.Probe["PWR." + key + "_dcraw"] = dc.ToString();
 
-                sb.AppendLine(Pad(name, 30) + Pad(sa, 24) + Pad(sd, 24) + ac + "/" + dc);
+                sb.AppendLine(Pad(name, 44) + Pad(sa, 22) + Pad(sd, 22) + ac + "/" + dc);
                 csv.AppendLine(name + "," + sa + "," + sd + "," + ac + "," + dc);
             }
 
             sb.AppendLine();
-            sb.AppendLine("原始值说明：时间类单位为秒，0 或 4294967295 表示“从不”；");
-            sb.AppendLine("动作类 0=不采取任何操作 1=睡眠 2=休眠 3=关机 4=关闭显示器；布尔类 0=关闭 1=开启。");
+            sb.AppendLine("Raw values: timeouts are in seconds; 0 or 4294967295 means never;");
+            sb.AppendLine("Actions: 0=do nothing, 1=sleep, 2=hibernate, 3=shut down, 4=display off; boolean: 0=off, 1=on.");
 
-            File.WriteAllText(Path.Combine(dir, "电源设置.txt"), sb.ToString(), new UTF8Encoding(true));
-            File.WriteAllText(Path.Combine(dir, "电源设置.csv"), csv.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "power_settings.txt"), sb.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "power_settings.csv"), csv.ToString(), new UTF8Encoding(true));
 
             StringBuilder sum = new StringBuilder();
-            sum.AppendLine("=== 电源与睡眠超时（当前电源方案） ===");
+            sum.AppendLine("=== Power and sleep timeouts (active scheme) ===");
             foreach (string[] item in PowerItems)
             {
                 string k = "PWR." + item[0] + "_ac";
                 if (!s.Probe.ContainsKey(k)) continue;
-                sum.AppendLine("  " + item[1] + "：交流 " + s.Probe[k] + " / 电池 " + s.Probe["PWR." + item[0] + "_dc"]);
+                sum.AppendLine("  " + item[1] + ": AC " + s.Probe[k] + " / DC " + s.Probe["PWR." + item[0] + "_dc"]);
             }
             s.Log(sum.ToString().TrimEnd());
         }
 
-        /// <summary>从 powercfg /query 输出中取出最后两个十六进制值（交流、直流）。</summary>
+        /// <summary>Take the last two hex values from powercfg output (AC, DC).</summary>
         private static bool ParseIndices(string text, out long ac, out long dc)
         {
             ac = dc = 0;
@@ -745,12 +745,12 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             return true;
         }
 
-        /// <summary>按显示宽度补空格（中文算 2 列），保证 txt 里的表格对齐。</summary>
+        /// <summary>Pad by display width (CJK counts as 2 columns) so txt tables line up.</summary>
         private static string Pad(string text, int width)
         {
             int w = 0;
             foreach (char c in text) w += (c >= 0x2E80) ? 2 : 1;
-            if (w >= width) return text;
+            if (w >= width) return text + "  ";
             return text + new string(' ', width - w);
         }
 
@@ -760,54 +760,54 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             {
                 switch ((int)v)
                 {
-                    case 0: return "不采取任何操作";
-                    case 1: return "睡眠";
-                    case 2: return "休眠";
-                    case 3: return "关机";
-                    case 4: return "关闭显示器";
-                    default: return "未知（" + v + "）";
+                    case 0: return "Do nothing";
+                    case 1: return "Sleep";
+                    case 2: return "Hibernate";
+                    case 3: return "Shut down";
+                    case 4: return "Turn off display";
+                    default: return "Unknown (" + v + ")";
                 }
             }
-            if (kind == "bool") return v == 0 ? "关闭" : "开启";
-            if (v == 0 || v == 4294967295L) return "从不";
-            if (v < 60) return v + " 秒";
+            if (kind == "bool") return v == 0 ? "Off" : "On";
+            if (v == 0 || v == 4294967295L) return "Never";
+            if (v < 60) return v + " s";
             if (v < 3600)
             {
                 long m = v / 60, r = v % 60;
-                return r == 0 ? m + " 分钟" : m + " 分 " + r + " 秒";
+                return r == 0 ? m + " min" : m + " min " + r + " s";
             }
             long h = v / 3600, mm = (v % 3600) / 60;
-            return mm == 0 ? h + " 小时" : h + " 小时 " + mm + " 分";
+            return mm == 0 ? h + " h" : h + " h " + mm + " min";
         }
 
         public static void Energy(Session s)
         {
-            string dir = s.Dir("42_能耗诊断");
-            string f = Path.Combine(dir, "能耗诊断.html");
+            string dir = s.Dir("42_Energy_Report");
+            string f = Path.Combine(dir, "energy_report.html");
             string o;
             int rc = Tool.Run("powercfg.exe", "/energy /output " + Tool.Q(f) + " /duration 60",
                               180000, s.Token, out o, Encoding.Default);
             WaitFile(f, 30000, s.Token);
-            if (!File.Exists(f)) throw new Exception("能耗诊断失败（需管理员权限）：" + Trim(o, 200));
+            if (!File.Exists(f)) throw new Exception("Energy report failed (requires admin): " + Trim(o, 200));
         }
 
         public static void SleepStudy(Session s)
         {
-            string dir = s.Dir("43_睡眠诊断");
-            string f = Path.Combine(dir, "睡眠诊断.html");
+            string dir = s.Dir("43_Sleep_Study");
+            string f = Path.Combine(dir, "sleep_study.html");
             string o;
             Tool.Run("powercfg.exe", "/sleepstudy /output " + Tool.Q(f), 180000, s.Token, out o, Encoding.Default);
             WaitFile(f, 30000, s.Token);
-            if (!File.Exists(f)) throw new Exception("睡眠诊断失败（需管理员权限，且系统需支持 Modern Standby）：" + Trim(o, 200));
+            if (!File.Exists(f)) throw new Exception("Sleep study failed (requires admin and Modern Standby support): " + Trim(o, 200));
         }
 
-        // ---------------- 性能 ----------------
+        // ---------------- performance ----------------
         public static void Perf(Session s)
         {
-            string dir = s.Dir("50_性能");
+            string dir = s.Dir("50_Performance");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
-Write-Output '时间,CPU使用率%,可用内存MB,提交内存MB,磁盘忙%,CPU当前频率MHz,电池电量'
+Write-Output 'Time,CPU%,FreeMemMB,CommittedMB,DiskBusy%,CPUMHz,Battery%'
 for($i=0; $i -lt 20; $i++){
   $cpu = ''
   try { $cpu = [string](Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter ""Name='_Total'"").PercentProcessorTime } catch {}
@@ -825,33 +825,33 @@ for($i=0; $i -lt 20; $i++){
 }
 ";
             string outp = Tool.Ps(ps, 240000, s.Token);
-            if (outp.Trim().Length == 0) throw new Exception("性能采样未返回数据");
-            File.WriteAllText(Path.Combine(dir, "性能采样.csv"), outp, new UTF8Encoding(true));
+            if (outp.Trim().Length == 0) throw new Exception("Performance sampling returned no data");
+            File.WriteAllText(Path.Combine(dir, "perf_sample.csv"), outp, new UTF8Encoding(true));
         }
 
         public static void Gpu(Session s)
         {
-            string dir = s.Dir("60_显示显卡");
+            string dir = s.Dir("60_Display_GPU");
             string f = Path.Combine(dir, "dxdiag.txt");
             string o;
             Tool.Run("dxdiag.exe", "/t " + Tool.Q(f), 120000, s.Token, out o, Encoding.Default);
             WaitFile(f, 60000, s.Token);
-            if (!File.Exists(f)) WriteNothing(dir, "dxdiag 未生成报告（可能被安全软件拦截）。");
+            if (!File.Exists(f)) WriteNothing(dir, "dxdiag produced no report (possibly blocked by security software).");
         }
 
-        // ---------------- 网络 ----------------
+        // ---------------- network ----------------
         public static void NetCfg(Session s)
         {
-            string dir = s.Dir("70_网络");
+            string dir = s.Dir("70_Network");
             StringBuilder sb = new StringBuilder();
             string[][] cmds = new string[][] {
-                new string[] { "IP 配置", "ipconfig /all" },
-                new string[] { "路由表", "route print" },
-                new string[] { "ARP 表", "arp -a" },
-                new string[] { "无线接口", "netsh wlan show interfaces" },
-                new string[] { "无线驱动能力", "netsh wlan show drivers" },
-                new string[] { "TCP 全局参数", "netsh int tcp show global" },
-                new string[] { "代理设置", "netsh winhttp show proxy" }
+                new string[] { "IP configuration", "ipconfig /all" },
+                new string[] { "Routing table", "route print" },
+                new string[] { "ARP table", "arp -a" },
+                new string[] { "Wi-Fi interfaces", "netsh wlan show interfaces" },
+                new string[] { "Wi-Fi driver capabilities", "netsh wlan show drivers" },
+                new string[] { "TCP global parameters", "netsh int tcp show global" },
+                new string[] { "Proxy settings", "netsh winhttp show proxy" }
             };
             foreach (string[] c in cmds)
             {
@@ -862,69 +862,69 @@ for($i=0; $i -lt 20; $i++){
                 sb.AppendLine(outp);
                 sb.AppendLine();
             }
-            File.WriteAllText(Path.Combine(dir, "网络配置.txt"), sb.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "network_config.txt"), sb.ToString(), new UTF8Encoding(true));
         }
 
         public static void WlanReport(Session s)
         {
-            string dir = s.Dir("71_无线报告");
+            string dir = s.Dir("71_WLAN_Report");
             string o;
             Tool.Run("netsh.exe", "wlan show wlanreport", 120000, s.Token, out o, Encoding.Default);
             string src = @"C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html";
             WaitFile(src, 30000, s.Token);
             if (File.Exists(src))
             {
-                File.Copy(src, Path.Combine(dir, "无线历史报告.html"), true);
+                File.Copy(src, Path.Combine(dir, "wlan_history.html"), true);
                 string side = @"C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.xml";
                 if (File.Exists(side))
                 {
-                    try { File.Copy(side, Path.Combine(dir, "无线历史报告.xml"), true); } catch { }
+                    try { File.Copy(side, Path.Combine(dir, "wlan_history.xml"), true); } catch { }
                 }
             }
             else
             {
-                WriteNothing(dir, "无线历史报告生成失败（可能没有无线网卡，或需要管理员权限）。");
+                WriteNothing(dir, "Wi-Fi history report failed (no wireless adapter, or admin required).");
             }
         }
 
-        // ---------------- 存储 ----------------
+        // ---------------- storage ----------------
         public static void Disk(Session s)
         {
-            string dir = s.Dir("80_存储");
+            string dir = s.Dir("80_Storage");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
-'=== 物理磁盘 ==='
+'=== Physical disks ==='
 Get-PhysicalDisk | Select-Object DeviceId,FriendlyName,MediaType,BusType,HealthStatus,OperationalStatus,@{n='SizeGB';e={[math]::Round($_.Size/1GB,0)}} | Format-Table -AutoSize | Out-String -Width 200
-'=== 可靠性计数器（SMART） ==='
+'=== Reliability counters (SMART) ==='
 Get-PhysicalDisk | ForEach-Object {
   $d = $_
   $r = $null
   try { $r = $d | Get-StorageReliabilityCounter } catch {}
   if($r){
-    '磁盘: ' + $d.FriendlyName
-    '  温度(C): ' + $r.Temperature + '   通电小时: ' + $r.PowerOnHours + '   磨损: ' + $r.Wear + '   读错误: ' + $r.ReadErrorsTotal + '   写错误: ' + $r.WriteErrorsTotal
+    'Disk: ' + $d.FriendlyName
+    '  Temp(C): ' + $r.Temperature + '   PowerOnHours: ' + $r.PowerOnHours + '   Wear: ' + $r.Wear + '   ReadErrors: ' + $r.ReadErrorsTotal + '   WriteErrors: ' + $r.WriteErrorsTotal
   }
 }
-'=== 卷 ==='
+'=== Volumes ==='
 Get-Volume | Select-Object DriveLetter,FileSystemLabel,FileSystem,HealthStatus,@{n='SizeGB';e={[math]::Round($_.Size/1GB,0)}},@{n='FreeGB';e={[math]::Round($_.SizeRemaining/1GB,0)}} | Format-Table -AutoSize | Out-String -Width 200
-'=== 磁盘 ==='
+'=== Disks ==='
 Get-Disk | Select-Object Number,FriendlyName,PartitionStyle,@{n='SizeGB';e={[math]::Round($_.Size/1GB,0)}},HealthStatus,OperationalStatus | Format-Table -AutoSize | Out-String -Width 200
 ";
             string outp = Tool.Ps(ps, 120000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "磁盘健康.txt"), outp, new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "disk_health.txt"), outp, new UTF8Encoding(true));
         }
 
-        // ---------------- 附加 ----------------
+        // ---------------- extra ----------------
         public static void AppDir(Session s)
         {
             if (string.IsNullOrEmpty(s.AppDir) || !Directory.Exists(s.AppDir))
-                throw new Exception("未指定有效的附加日志目录");
-            string dir = s.Dir("90_附加日志");
+                throw new Exception("No valid extra log folder specified");
+            string dir = s.Dir("90_App_Logs");
             long bytes = CopyTree(s.AppDir, Path.Combine(dir, new DirectoryInfo(s.AppDir).Name), 1500L * 1024 * 1024);
-            if (bytes == 0) WriteNothing(dir, "目标目录为空或不可读：" + s.AppDir);
+            if (bytes == 0) WriteNothing(dir, "Target folder is empty or unreadable: " + s.AppDir);
         }
 
-        // ---------------- 工具方法 ----------------
+        // ---------------- helpers ----------------
         private static void ParseEvents(string tsv, string logName, Session s)
         {
             if (string.IsNullOrEmpty(tsv)) return;
@@ -987,7 +987,7 @@ Get-Disk | Select-Object Number,FriendlyName,PartitionStyle,@{n='SizeGB';e={[mat
 
         private static void WriteNothing(string dir, string text)
         {
-            try { File.WriteAllText(Path.Combine(dir, "说明.txt"), text, new UTF8Encoding(true)); }
+            try { File.WriteAllText(Path.Combine(dir, "README.txt"), text, new UTF8Encoding(true)); }
             catch { }
         }
 

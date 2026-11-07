@@ -1,90 +1,65 @@
-# Windows 笔记本测试日志采集工具
+# Laptop Log Collector
 
-给笔记本测试人员用的一键日志采集工具。勾选需要的内容，自动收集系统日志、硬件信息、
-崩溃转储、电源与性能数据，生成一份可直接交给研发的 HTML 报告。
+A one-click log collection tool for Windows laptop testers. Tick the items you need; the tool
+copies the logs, system information, crash dumps, power and performance data into one folder and
+generates an HTML report that can be handed straight to engineering.
 
-- 单文件 exe，免安装，不依赖 .NET / Python / 运行库
-- 采集过程只读，不清空日志、不改系统设置、不装任何东西
-- 无网络环境可完整运行
+- Single portable exe, no .NET / Python / runtime required
+- Read-only: does not clear logs, change settings or install anything
+- Works offline; interface, reports and folder names are in English
 
-## 分支与版本
+![UI](dist/UI_Preview.png)
 
-每个发布版本单独一条分支，`main` 始终是最新开发版。
+## Branches
 
-| 分支 | 版本 | 说明 |
+Every release gets its own branch; `main` always tracks the latest development state.
+
+| Branch | Version | Notes |
 |---|---|---|
-| `main` | 开发版 | 最新代码，可能包含未发布的改动 |
-| `v1.2` | v1.2 | 新增电源与睡眠超时设置采集；新增 HTML 浏览页（全部内容.html + 各目录 浏览.html） |
-| `v1.1` | v1.1 | 增加进程内存转储；修复"没采到却报成功"；转储设置诊断 |
-| `v1.0` | v1.0 | 初版。源码在接入 git 前已被迭代覆盖，未保留该分支 |
+| `main` | dev | latest code, may contain unreleased changes |
+| `v1.3` | v1.3 | English UI, reports and folder names; all messages localised |
+| `v1.2` | v1.2 | power/sleep timeout collection; HTML viewer (All_Content.html + browse.html) |
+| `v1.1` | v1.1 | process memory dump; "skipped" instead of false success; dump-config diagnostics |
+| `v1.0` | v1.0 | initial release; sources were overwritten before git was introduced |
 
-新版本发布流程：在 `main` 上改完后，新建 `vX.Y` 分支并打同名的 tag。
+New release: work on `main`, then `git branch vX.Y` and tag it with the same name.
 
-## 功能
+## What it collects
 
-| 分组 | 采集项 |
+| Group | Items |
 |---|---|
-| 基础信息 | 系统事件日志 + 关键事件分析、应用程序事件日志、系统信息与硬件明细、驱动与设备清单、进程/服务/启动项快照、补丁与已安装软件、msinfo32（可选） |
-| 崩溃与转储 | 蓝屏 Minidump、WER 应用崩溃报告、MEMORY.DMP、进程内存转储（GB 级） |
-| 电源与电池 | 电池健康报告、电源设置与唤醒源（睡眠/休眠/关屏/关硬盘超时、合盖与电源键动作、混合睡眠）、能耗诊断（60s）、睡眠诊断 |
-| 性能 | 性能采样（30s）、dxdiag 显卡信息 |
-| 网络 | 网络配置快照、无线连接历史报告 |
-| 存储 | 磁盘与 SMART 健康 |
-| 其他 | 附加日志目录（自定义路径） |
+| Basics | System event log + key event analysis, application event log, system info and hardware details, drivers and devices, processes/services/startup, patches and installed software, msinfo32 (optional) |
+| Crashes and dumps | Blue screen dumps (Minidump), WER reports, MEMORY.DMP, process memory dump (GB-sized full dump of a running process) |
+| Power and battery | Battery health report, power settings and wake sources (sleep/hibernate/display/disk timeouts, lid and power button action, hybrid sleep), energy report, sleep study |
+| Performance | Performance sampling (30 s), dxdiag graphics info |
+| Network | Network configuration snapshot, Wi-Fi connection history |
+| Storage | Disk and SMART health |
+| Other | Extra log folder (custom path) |
 
-## 目录结构
+## Output
 
-```
-src/                  C# 源码（.NET Framework 4.x，WinForms）
-  Core.cs             基础设施：进程调用、机器信息、事件目录
-  Jobs.cs             采集任务实现
-  Report.cs           HTML 报告生成
-  MainForm.cs         界面
-  Program.cs          入口、命令行、任务调度
-  AssemblyInfo.cs     程序集信息
-  app.manifest        应用清单（asInvoker + DPI）
-build.ps1             一键编译脚本
-dist/                 构建产物（exe、使用说明、界面预览、发布包）
-docs/                 需求分析报告
-```
+Each run creates `<serial>_<timestamp>/` containing:
 
-## 编译
+- `report.html` — key findings, event timeline, hardware, battery and power settings
+- `All_Content.html` — every text file in one browsable page (sidebar + collapsible blocks)
+- `browse.html` in each subfolder — that folder's text content in a browser
+- `Collection_Info.txt` — what was collected, status and how to read it
+- Raw logs: `System.evtx`, `Application.evtx`, `*.dmp`, CSV/TXT exports
 
-无需 Visual Studio，用系统自带的 .NET Framework 编译器即可：
+Text files are decoded as UTF-8, UTF-16 or GBK automatically, so Chinese output of system tools
+still renders correctly.
+
+## Build
+
+No Visual Studio required — the .NET Framework compiler shipped with Windows is used:
 
 ```powershell
 .\build.ps1
 ```
 
-输出 `build\LogCollector.exe`。
+Output goes to `build\LogCollector.exe`.
 
-## 使用
-
-双击 `dist\LogCollector.exe`，勾选采集项，点"开始采集"。
-
-建议以管理员身份运行，否则 WER、能耗诊断、睡眠诊断、无线历史报告会被跳过。
-
-详细说明见 [dist/使用说明.txt](dist/使用说明.txt)。
-
-## 输出物
-
-每次采集生成一个文件夹：
-
-- `report.html` —— 结论页：关键发现、事件时间线、硬件、电池与电源设置
-- `全部内容.html` —— 所有文本文件的汇总浏览页（左侧目录 + 折叠展开）
-- 各子目录 —— 原始 txt/csv/evtx/dmp，并附一份 `浏览.html` 可直接在浏览器查看
-- `采集说明.txt` —— 本次采了什么、成功/跳过/失败原因
-
-## 电源设置采集
-
-`41_电源设置/电源设置.txt` 与报告中的"电源与睡眠设置"表，包含交流/电池两种供电下的：
-
-睡眠超时、休眠超时、关闭显示器、关闭硬盘、无人参与系统睡眠、合盖动作、电源键动作、混合睡眠。
-
-实现上用 `powercfg /qh`（含隐藏项）查询，取输出末尾的两个十六进制值为交流/直流索引，
-再按类型格式化为"10 分钟""从不""休眠"等可读文本；原始秒数同时保留在 csv 中。
-
-## 命令行
+## Command line
 
 ```
 LogCollector.exe /cli /out:D:\logs /jobs:events-system,sysinfo,minidump
@@ -92,15 +67,15 @@ LogCollector.exe /cli /all /out:D:\logs /tag:SN1234567
 LogCollector.exe /cli /out:D:\logs /jobs:pdump /proc:chrome.exe
 ```
 
-参数：`/cli` 无界面、`/out` 输出目录、`/jobs` 采集项、`/all` 全部、
-`/tag` 包名前缀、`/case` 用例编号、`/symptom` 现象描述、`/proc` 进程名。
+Options: `/cli` headless, `/out` output folder, `/jobs` comma separated item ids, `/all` every item,
+`/tag` package name prefix, `/case` case id, `/symptom` symptom text, `/proc` target process.
 
-## 已知限制
+## Notes
 
-- 温度、风扇转速、适配器识别等 EC 数据没有标准接口，需厂商 WMI/EC 支持
-- 蓝屏转储由系统产生，工具只能收集；系统设为"小内存转储"时不会生成 MEMORY.DMP
-- msinfo32 在部分机器上会卡住，故降级为默认不勾选
-
-## 说明
-
-采集包可能包含个人信息（用户名、文件路径、SSID 等），请按公司数据分级要求流转。
+- Temperature, fan speed and adapter identification need vendor WMI/EC interfaces — not available
+  through standard Windows APIs.
+- Blue screen dumps are produced by Windows, not by this tool. With "Small memory dump" configured
+  no MEMORY.DMP is ever created; see `dist/User_Guide.txt` section 6.
+- Process dumps can be several GB; the tool checks free space before copying large dumps.
+- Collected packages may contain personal data (user names, paths, SSIDs). Handle them according to
+  your data classification policy.

@@ -14,27 +14,27 @@ namespace LogCollector
         private static Dictionary<string, string> BuildDirs()
         {
             Dictionary<string, string> d = new Dictionary<string, string>();
-            d["events-system"] = "10_系统日志";
-            d["events-app"] = "11_应用程序日志";
-            d["sysinfo"] = "20_系统信息";
-            d["drivers"] = "21_驱动设备";
-            d["snapshot"] = "22_运行状态";
-            d["software"] = "23_补丁与软件";
+            d["events-system"] = "10_System_Logs";
+            d["events-app"] = "11_Application_Logs";
+            d["sysinfo"] = "20_System_Info";
+            d["drivers"] = "21_Drivers_Devices";
+            d["snapshot"] = "22_Runtime_Snapshot";
+            d["software"] = "23_Patches_Software";
             d["msinfo32"] = "24_msinfo32";
-            d["minidump"] = "30_崩溃转储";
-            d["wer"] = "31_应用崩溃报告";
-            d["memdump"] = "32_内存转储";
-            d["pdump"] = "33_进程转储";
-            d["battery"] = "40_电源电池";
-            d["powercfg"] = "41_电源设置";
-            d["energy"] = "42_能耗诊断";
-            d["sleepstudy"] = "43_睡眠诊断";
-            d["perf"] = "50_性能";
-            d["gpu"] = "60_显示显卡";
-            d["netcfg"] = "70_网络";
-            d["wlan"] = "71_无线报告";
-            d["disk"] = "80_存储";
-            d["appdir"] = "90_附加日志";
+            d["minidump"] = "30_Crash_Dumps";
+            d["wer"] = "31_WER_Reports";
+            d["memdump"] = "32_Memory_Dump";
+            d["pdump"] = "33_Process_Dump";
+            d["battery"] = "40_Battery";
+            d["powercfg"] = "41_Power_Settings";
+            d["energy"] = "42_Energy_Report";
+            d["sleepstudy"] = "43_Sleep_Study";
+            d["perf"] = "50_Performance";
+            d["gpu"] = "60_Display_GPU";
+            d["netcfg"] = "70_Network";
+            d["wlan"] = "71_WLAN_Report";
+            d["disk"] = "80_Storage";
+            d["appdir"] = "90_App_Logs";
             return d;
         }
 
@@ -77,7 +77,7 @@ namespace LogCollector
                 if (s.Token.IsCancellationRequested)
                 {
                     r.Status = JobStatus.Cancelled;
-                    r.Message = "用户取消";
+                    r.Message = "Cancelled by user";
                     continue;
                 }
 
@@ -90,8 +90,8 @@ namespace LogCollector
                     if (def.NeedAdmin && !s.IsAdmin)
                     {
                         r.Status = JobStatus.Skipped;
-                        r.Message = "需要管理员权限，已跳过";
-                        s.Log("  · 跳过（需要管理员权限）");
+                        r.Message = "Administrator rights required; skipped";
+                        s.Log("  · Skipped (requires administrator)");
                     }
                     else
                     {
@@ -103,14 +103,14 @@ namespace LogCollector
                 {
                     r.Status = JobStatus.Skipped;
                     r.Message = ex.Message;
-                    s.Log("  · 跳过：" + ex.Message);
+                    s.Log("  · Skipped: " + ex.Message);
                 }
                 catch (Exception ex)
                 {
                     r.Status = JobStatus.Failed;
                     r.Message = ex.Message;
                     failed++;
-                    s.Log("  · 失败：" + ex.Message);
+                    s.Log("  · Failed: " + ex.Message);
                 }
                 r.Seconds = (DateTime.Now - t0).TotalSeconds;
 
@@ -122,21 +122,21 @@ namespace LogCollector
                     if (Directory.Exists(p)) r.Bytes = Tool.DirSize(p);
                 }
                 if (r.Status == JobStatus.Success)
-                    s.Log("  · 完成，用时 " + ((int)r.Seconds) + " 秒" + (r.Bytes > 0 ? "，" + Tool.FmtSize(r.Bytes) : ""));
+                    s.Log("  · Done in " + ((int)r.Seconds) + " s" + (r.Bytes > 0 ? ", " + Tool.FmtSize(r.Bytes) : ""));
 
                 s.StepDone(total);
             }
 
             DateTime end = DateTime.Now;
 
-            // 浏览页：每个子目录一份，根目录一份汇总
-            s.Step(total, "生成 HTML 浏览页");
+            // viewer: one page per folder plus an overview at the root
+            s.Step(total, "Generating HTML viewer");
             try { HtmlPreview.BuildAll(s); }
-            catch (Exception ex) { s.Log("生成浏览页失败：" + ex.Message); }
+            catch (Exception ex) { s.Log("Failed to generate HTML viewer: " + ex.Message); }
             s.StepDone(total);
 
-            // 报告与说明
-            s.Step(total, "生成 HTML 报告");
+            // report and notes
+            s.Step(total, "Generating HTML report");
             try
             {
                 string html = Report.Build(s, start, end, s.Results);
@@ -144,62 +144,62 @@ namespace LogCollector
             }
             catch (Exception ex)
             {
-                s.Log("生成报告失败：" + ex.Message);
+                s.Log("Failed to generate report: " + ex.Message);
             }
-            try { File.WriteAllText(Path.Combine(s.OutDir, "采集说明.txt"), Summary(s, start, end), new UTF8Encoding(true)); }
+            try { File.WriteAllText(Path.Combine(s.OutDir, "Collection_Info.txt"), Summary(s, start, end), new UTF8Encoding(true)); }
             catch { }
             s.StepDone(total);
 
             s.Log("");
-            s.Log("采集完成：共 " + total + " 项，失败 " + failed + " 项");
-            s.Log("输出目录：" + s.OutDir);
+            s.Log("Done: " + total + " item(s), " + failed + " failed");
+            s.Log("Output folder: " + s.OutDir);
             return failed;
         }
 
         public static string Summary(Session s, DateTime start, DateTime end)
         {
             StringBuilder b = new StringBuilder();
-            b.AppendLine("Windows 笔记本日志采集包");
+            b.AppendLine("Windows laptop log collection package");
             b.AppendLine("========================================");
-            b.AppendLine("机型      : " + s.Info.Display());
-            b.AppendLine("序列号    : " + s.Info.Serial);
-            b.AppendLine("系统      : " + s.Info.OsName + " " + s.Info.OsVersion + " Build " + s.Info.OsBuild + " " + s.Info.OsArch);
-            b.AppendLine("CPU       : " + s.Info.Cpu);
-            b.AppendLine("BIOS      : " + s.Info.Bios + " " + s.Info.BiosDate);
-            b.AppendLine("采集人    : " + s.OperatorName);
-            b.AppendLine("用例编号  : " + s.CaseId);
-            b.AppendLine("采集时间  : " + start.ToString("yyyy-MM-dd HH:mm:ss") + " → " + end.ToString("yyyy-MM-dd HH:mm:ss")
-                        + "（" + ((int)(end - start).TotalSeconds) + " 秒）");
-            b.AppendLine("运行权限  : " + (s.IsAdmin ? "管理员" : "普通用户"));
+            b.AppendLine("Model      : " + s.Info.Display());
+            b.AppendLine("Serial     : " + s.Info.Serial);
+            b.AppendLine("OS         : " + s.Info.OsName + " " + s.Info.OsVersion + " Build " + s.Info.OsBuild + " " + s.Info.OsArch);
+            b.AppendLine("CPU        : " + s.Info.Cpu);
+            b.AppendLine("BIOS       : " + s.Info.Bios + " " + s.Info.BiosDate);
+            b.AppendLine("Collected  : " + s.OperatorName);
+            b.AppendLine("Case ID    : " + s.CaseId);
+            b.AppendLine("Time       : " + start.ToString("yyyy-MM-dd HH:mm:ss") + " → " + end.ToString("yyyy-MM-dd HH:mm:ss")
+                        + " (" + ((int)(end - start).TotalSeconds) + " s)");
+            b.AppendLine("Privilege  : " + (s.IsAdmin ? "Administrator" : "Standard user"));
             if (!string.IsNullOrEmpty(s.Symptom))
             {
-                b.AppendLine("现象描述  :");
+                b.AppendLine("Symptom    :");
                 b.AppendLine(s.Symptom);
             }
             b.AppendLine();
-            b.AppendLine("采集项结果");
+            b.AppendLine("Results");
             b.AppendLine("----------------------------------------");
             foreach (JobResult r in s.Results)
             {
-                string st = r.Status == JobStatus.Success ? "成功" : (r.Status == JobStatus.Failed ? "失败" : (r.Status == JobStatus.Skipped ? "跳过" : "未完成"));
+                string st = r.Status == JobStatus.Success ? "Success" : (r.Status == JobStatus.Failed ? "Failed" : (r.Status == JobStatus.Skipped ? "Skipped" : "Incomplete"));
                 b.AppendLine(string.Format("{0,-10} {1,-30} {2,10}  {3}", st, r.Name, r.Bytes > 0 ? Tool.FmtSize(r.Bytes) : "-", r.Message));
             }
             b.AppendLine();
-            b.AppendLine("查看方式");
+            b.AppendLine("How to read");
             b.AppendLine("----------------------------------------");
-            b.AppendLine("1. 先打开 report.html，看「关键发现」「电源与睡眠设置」与「事件时间线」；");
-            b.AppendLine("2. 想看所有文本内容：打开 全部内容.html（每个子目录也有 浏览.html）；");
-            b.AppendLine("3. 蓝屏问题：用 WinDbg 打开 30_崩溃转储 下的 .dmp 文件；");
-            b.AppendLine("4. 事件日志：双击 10_系统日志/System.evtx 可用事件查看器直接打开；");
-            b.AppendLine("5. 电池问题：打开 40_电源电池/电池报告.html；");
-            b.AppendLine("6. 电源设置：见 41_电源设置/电源设置.txt（睡眠/休眠/关屏超时、合盖动作）。");
+            b.AppendLine("1. Open report.html first: Key findings, Power and sleep settings, Event timeline;");
+            b.AppendLine("2. For all text content open All_Content.html (each folder also has browse.html);");
+            b.AppendLine("3. BSOD: open the .dmp file under 30_Crash_Dumps with WinDbg;");
+            b.AppendLine("4. Event logs: double-click 10_System_Logs/System.evtx to open it in Event Viewer;");
+            b.AppendLine("5. Battery: open 40_Battery/battery_report.html;");
+            b.AppendLine("6. Power settings: see 41_Power_Settings/power_settings.txt (sleep/hibernate/display timeouts, lid action).");
             return b.ToString();
         }
     }
 
     static class Program
     {
-        public const string Version = "1.2";
+        public const string Version = "1.3";
 
         [STAThread]
         static int Main(string[] args)
@@ -279,7 +279,7 @@ namespace LogCollector
             }
             if (picked.Count == 0)
             {
-                Console.WriteLine("没有匹配的采集项。");
+                Console.WriteLine("No matching collection items.");
                 return 2;
             }
             string tagName = string.IsNullOrEmpty(tag) ? (s.Info.Serial.Length > 0 ? s.Info.Serial : s.Info.Model) : tag;

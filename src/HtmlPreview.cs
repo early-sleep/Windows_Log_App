@@ -6,13 +6,13 @@ using System.Text;
 namespace LogCollector
 {
     /// <summary>
-    /// 把采集到的文本文件渲染成 HTML：每个子目录一份 浏览.html，根目录一份 全部内容.html。
-    /// 仅供肉眼查看，不替代原始 txt。
+    /// Renders collected text files as HTML: one browse.html per folder, one All_Content.html at the root.
+    /// For human reading only; does not replace the raw txt files.
     /// </summary>
     public static class HtmlPreview
     {
-        private const long MaxInline = 200 * 1024;      // 单文件最多内联 200KB
-        private const long MaxFile = 20 * 1024 * 1024;  // 超过 20MB 的文本不渲染
+        private const long MaxInline = 200 * 1024;      // inline at most 200 KB per file
+        private const long MaxFile = 20 * 1024 * 1024;  // skip text files larger than 20 MB
         private static readonly string[] TextExt = new string[] {
             ".txt", ".csv", ".log", ".xml", ".json", ".md", ".ini", ".htm", ".html"
         };
@@ -20,7 +20,7 @@ namespace LogCollector
         private static bool IsText(string path)
         {
             string ext = Path.GetExtension(path).ToLowerInvariant();
-            if (ext == ".html" || ext == ".htm") return false;   // 已经自身可浏览
+            if (ext == ".html" || ext == ".htm") return false;   // already viewable as-is
             foreach (string e in TextExt) if (e == ext) return true;
             return false;
         }
@@ -43,31 +43,31 @@ namespace LogCollector
             try { WriteAllPage(s, dirs); } catch { }
         }
 
-        // ---------------------------------------------------------------- 单目录
+        // ---------------------------------------------------------------- single folder
         private static void WriteFolderPage(string dir)
         {
             List<FileInfo> files = Collect(dir);
             if (files.Count == 0) return;
 
             StringBuilder b = new StringBuilder();
-            Head(b, Path.GetFileName(dir), "../全部内容.html", "返回总览");
+            Head(b, Path.GetFileName(dir), "../All_Content.html", "Back to overview");
             b.Append("<div class=\"hd\"><h1>").Append(E(Path.GetFileName(dir))).Append("</h1>");
-            b.Append("<div class=\"sub\">").Append(files.Count).Append(" 个文件，共 ")
+            b.Append("<div class=\"sub\">").Append(files.Count).Append(" files, ")
              .Append(E(Tool.FmtSize(Sum(files)))).Append("</div></div>");
             foreach (FileInfo f in files) Section(b, f);
             Foot(b);
 
-            File.WriteAllText(Path.Combine(dir, "浏览.html"), b.ToString(), new UTF8Encoding(false));
+            File.WriteAllText(Path.Combine(dir, "browse.html"), b.ToString(), new UTF8Encoding(false));
         }
 
-        // ---------------------------------------------------------------- 全部
+        // ---------------------------------------------------------------- everything
         private static void WriteAllPage(Session s, List<string> dirs)
         {
             StringBuilder b = new StringBuilder();
-            Head(b, "全部内容", null, null);
+            Head(b, "All content", null, null);
 
-            b.Append("<div class=\"layout\"><nav><div class=\"navt\">目录</div><ul>");
-            b.Append("<li><a href=\"report.html\">◂ 返回报告</a></li>");
+            b.Append("<div class=\"layout\"><nav><div class=\"navt\">Contents</div><ul>");
+            b.Append("<li><a href=\"report.html\">◂ Back to report</a></li>");
             List<string> names = new List<string>();
             foreach (string d in dirs)
             {
@@ -79,9 +79,9 @@ namespace LogCollector
             }
             b.Append("</ul></nav><main>");
 
-            b.Append("<div class=\"hd\"><h1>全部采集内容</h1><div class=\"sub\">")
+            b.Append("<div class=\"hd\"><h1>All collected content</h1><div class=\"sub\">")
              .Append(E(s.Info.Display())).Append(" · ").Append(E(s.Info.OsName)).Append(" ")
-             .Append(E(s.Info.OsVersion)).Append(" · 采集于 ")
+             .Append(E(s.Info.OsVersion)).Append(" · collected at ")
              .Append(DateTime.Now.ToString("yyyy-MM-dd HH:mm")).Append("</div></div>");
 
             int idx = 0;
@@ -91,9 +91,9 @@ namespace LogCollector
                 if (fs.Count == 0) continue;
                 string n = Path.GetFileName(d);
                 b.Append("<section id=\"d").Append(idx).Append("\"><h2>").Append(E(n));
-                b.Append("<span class=\"cnt\">").Append(fs.Count).Append(" 个文件 / ")
+                b.Append("<span class=\"cnt\">").Append(fs.Count).Append(" files / ")
                  .Append(E(Tool.FmtSize(Sum(fs)))).Append("</span>");
-                b.Append("<a class=\"lnk\" href=\"").Append(Uri.EscapeDataString(n)).Append("/浏览.html\">单独打开</a>");
+                b.Append("<a class=\"lnk\" href=\"").Append(Uri.EscapeDataString(n)).Append("/browse.html\">Open alone</a>");
                 b.Append("</h2>");
                 foreach (FileInfo f in fs) Section(b, f);
                 b.Append("</section>");
@@ -102,10 +102,10 @@ namespace LogCollector
             b.Append("</main></div>");
             Foot(b);
 
-            File.WriteAllText(Path.Combine(s.OutDir, "全部内容.html"), b.ToString(), new UTF8Encoding(false));
+            File.WriteAllText(Path.Combine(s.OutDir, "All_Content.html"), b.ToString(), new UTF8Encoding(false));
         }
 
-        // ---------------------------------------------------------------- 组件
+        // ---------------------------------------------------------------- components
         private static List<FileInfo> Collect(string dir)
         {
             List<FileInfo> list = new List<FileInfo>();
@@ -118,7 +118,7 @@ namespace LogCollector
                     {
                         FileInfo fi = new FileInfo(f);
                         if (fi.Length > MaxFile) continue;
-                        if (string.Equals(fi.Name, "浏览.html", StringComparison.OrdinalIgnoreCase)) continue;
+                        if (string.Equals(fi.Name, "browse.html", StringComparison.OrdinalIgnoreCase)) continue;
                         list.Add(fi);
                     }
                     catch { }
@@ -158,7 +158,7 @@ namespace LogCollector
                     truncated = f.Length > MaxInline;
                 }
             }
-            catch (Exception ex) { text = "（无法读取： " + ex.Message + "）"; }
+            catch (Exception ex) { text = "(Cannot read: " + ex.Message + ")"; }
 
             int lines = 0;
             foreach (char c in text) if (c == '\n') lines++;
@@ -167,16 +167,16 @@ namespace LogCollector
             b.Append("<details class=\"f\"").Append(openAttr ? " open" : "").Append(">");
             b.Append("<summary><span class=\"fn\">").Append(E(f.Name)).Append("</span>");
             b.Append("<span class=\"meta\">").Append(E(Tool.FmtSize(f.Length))).Append(" · ")
-             .Append(lines).Append(" 行</span></summary>");
+             .Append(lines).Append(" lines</span></summary>");
             b.Append("<pre>").Append(E(text)).Append("</pre>");
             if (truncated)
-                b.Append("<div class=\"cut\">文件较大，此处只显示前 200 KB，完整内容请用文本编辑器打开原始文件。</div>");
+                b.Append("<div class=\"cut\">File is large; only the first 200 KB is shown. Open the original file for the full content.</div>");
             b.Append("</details>");
         }
 
         /// <summary>
-        /// 自动判断编码：先看 BOM，再严格按 UTF-8 解码，失败则按 GBK。
-        /// 系统命令（systeminfo / powercfg 等）的重定向输出是 GBK，必须回退，否则中文全是乱码。
+        /// Detect encoding: BOM first, then strict UTF-8, falling back to GBK.
+        /// Redirected output of system tools (systeminfo / powercfg) is GBK; without the fallback Chinese text is garbled.
         /// </summary>
         private static string Decode(byte[] buf, int len)
         {
@@ -218,8 +218,8 @@ namespace LogCollector
 
         private static void Foot(StringBuilder b)
         {
-            b.Append("<div class=\"ft\">由笔记本日志采集工具 v").Append(E(Program.Version))
-             .Append(" 生成 · 本页仅为便于阅读，数据以原始文件为准</div></body></html>");
+            b.Append("<div class=\"ft\">Generated by Laptop Log Collector v").Append(E(Program.Version))
+             .Append(" · for reading only; the original files are authoritative</div></body></html>");
         }
 
         private const string Css = @"

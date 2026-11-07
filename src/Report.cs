@@ -16,57 +16,57 @@ namespace LogCollector
 
             b.Append("<!DOCTYPE html><html lang=\"zh-CN\"><head><meta charset=\"utf-8\">");
             b.Append("<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">");
-            b.Append("<title>日志分析报告 - ").Append(H(s.Info.Display())).Append("</title>");
+            b.Append("<title>Log analysis report - ").Append(H(s.Info.Display())).Append("</title>");
             b.Append("<style>");
             b.Append(Css);
             b.Append("</style></head><body>");
 
-            // ---------- 头部 ----------
+            // ---------- header ----------
             b.Append("<div class=\"wrap\">");
             b.Append("<div class=\"hd\">");
             b.Append("<div class=\"hd-l\">");
-            b.Append("<div class=\"kicker\">Windows 笔记本日志采集报告</div>");
+            b.Append("<div class=\"kicker\">Windows laptop log collection report</div>");
             b.Append("<h1>").Append(H(s.Info.Display())).Append("</h1>");
             b.Append("<div class=\"sub\">").Append(H(s.Info.OsName)).Append(" ").Append(H(s.Info.OsVersion))
              .Append(" (Build ").Append(H(s.Info.OsBuild)).Append(") · ").Append(H(s.Info.OsArch)).Append("</div>");
             b.Append("</div>");
             b.Append("<div class=\"hd-r\">");
             b.Append("<table class=\"meta\">");
-            Row(b, "采集时间", start.ToString("yyyy-MM-dd HH:mm:ss"));
-            Row(b, "采集耗时", ((int)(end - start).TotalSeconds).ToString() + " 秒");
-            Row(b, "采集人", s.OperatorName);
-            Row(b, "用例编号", s.CaseId);
-            Row(b, "事件覆盖", s.RangeText());
-            Row(b, "运行权限", s.IsAdmin ? "管理员" : "普通用户");
+            Row(b, "Collected", start.ToString("yyyy-MM-dd HH:mm:ss"));
+            Row(b, "Duration", ((int)(end - start).TotalSeconds).ToString() + " s");
+            Row(b, "Collected by", s.OperatorName);
+            Row(b, "Case ID", s.CaseId);
+            Row(b, "Event range", s.RangeText());
+            Row(b, "Privilege", s.IsAdmin ? "Administrator" : "Standard user");
             b.Append("</table></div></div>");
 
-            // ---------- 现场信息 ----------
+            // ---------- test context ----------
             if (!string.IsNullOrEmpty(s.Symptom))
             {
-                b.Append("<div class=\"card\"><div class=\"card-t\">现象描述</div><div class=\"sym\">")
+                b.Append("<div class=\"card\"><div class=\"card-t\">Symptom</div><div class=\"sym\">")
                  .Append(H(s.Symptom).Replace("\n", "<br>")).Append("</div></div>");
             }
 
-            // ---------- 结论卡片 ----------
+            // ---------- summary cards ----------
             b.Append("<div class=\"cards\">");
             int bug = CountBugCheck(s);
             int shut = CountAny(s, new int[] { 41, 6008 });
             int whea = CountAny(s, new int[] { 17, 18, 19, 47 });
             int tdr = Count(s, 4101);
             int pnp = CountProbe(s, "PNP.");
-            b.Append(Card("蓝屏次数", bug.ToString(), bug > 0 ? "bad" : "ok", "BugCheck 记录（近 7 天）"));
-            b.Append(Card("异常关机", shut.ToString(), shut > 0 ? "bad" : "ok", "断电 / 死机 / 长按电源"));
-            b.Append(Card("硬件错误", whea.ToString(), whea > 0 ? "bad" : "ok", "WHEA 已纠正与致命错误"));
-            b.Append(Card("显示超时", tdr.ToString(), tdr > 0 ? "warn" : "ok", "TDR 显示驱动恢复"));
-            b.Append(Card("异常设备", pnp.ToString(), pnp > 0 ? "warn" : "ok", "驱动错误码非 0 的设备"));
-            b.Append(Card("运行时长", H(s.Info.Uptime), "info", "上次启动 " + H(s.Info.BootTime)));
+            b.Append(Card("Blue screens", bug.ToString(), bug > 0 ? "bad" : "ok", "BugCheck records (last 7 days)"));
+            b.Append(Card("Unexpected shutdowns", shut.ToString(), shut > 0 ? "bad" : "ok", "Power loss / hang / power button"));
+            b.Append(Card("Hardware errors", whea.ToString(), whea > 0 ? "bad" : "ok", "WHEA corrected and fatal"));
+            b.Append(Card("Display timeouts", tdr.ToString(), tdr > 0 ? "warn" : "ok", "TDR recoveries"));
+            b.Append(Card("Problem devices", pnp.ToString(), pnp > 0 ? "warn" : "ok", "Devices with a non-zero error code"));
+            b.Append(Card("Uptime", H(s.Info.Uptime), "info", "Booted " + H(s.Info.BootTime)));
             b.Append("</div>");
 
-            // ---------- 关键发现 ----------
-            b.Append("<div class=\"card\"><div class=\"card-t\">关键发现</div>");
+            // ---------- key findings ----------
+            b.Append("<div class=\"card\"><div class=\"card-t\">Key findings</div>");
             if (findings.Count == 0)
             {
-                b.Append("<div class=\"empty\">在已采集的日志中没有发现明显异常。如果问题确实存在，请确认采集时间点是否覆盖了问题发生时刻，并尝试勾选更多采集项。</div>");
+                b.Append("<div class=\"empty\">No obvious anomalies were found in the collected logs. If the issue is real, check that the collection time window covers the moment it occurred, and try selecting more items.</div>");
             }
             else
             {
@@ -80,18 +80,18 @@ namespace LogCollector
             }
             b.Append("</div>");
 
-            // ---------- 事件时间线 ----------
-            b.Append("<div class=\"card\"><div class=\"card-t\">关键事件时间线 <span class=\"hint\">按时间倒序，最多 60 条</span></div>");
+            // ---------- event timeline ----------
+            b.Append("<div class=\"card\"><div class=\"card-t\">Event timeline <span class=\"hint\">newest first, up to 60 rows</span></div>");
             List<EventRow> evs = new List<EventRow>(s.Events);
             evs.Sort(delegate(EventRow a, EventRow c) { return c.Time.CompareTo(a.Time); });
             if (evs.Count == 0)
             {
-                b.Append("<div class=\"empty\">未解析到关键事件（可能时间窗内无记录，或事件日志读取失败）。</div>");
+                b.Append("<div class=\"empty\">No key events were parsed (none in the time window, or the event log could not be read).</div>");
             }
             else
             {
-                b.Append("<table class=\"tl\"><thead><tr><th style=\"width:150px\">时间</th><th style=\"width:68px\">级别</th>")
-                 .Append("<th style=\"width:210px\">来源</th><th style=\"width:52px\">ID</th><th>说明</th></tr></thead><tbody>");
+                b.Append("<table class=\"tl\"><thead><tr><th style=\"width:150px\">Time</th><th style=\"width:68px\">Level</th>")
+                 .Append("<th style=\"width:210px\">Source</th><th style=\"width:52px\">ID</th><th>Description</th></tr></thead><tbody>");
                 int n = 0;
                 int skipped = 0;
                 Dictionary<string, int> seen = new Dictionary<string, int>();
@@ -109,7 +109,7 @@ namespace LogCollector
                     if (desc.Length == 0) { desc = Clip(e.Message, 160); }
                     else detail = Clip(e.Message, 160);
                     b.Append("<tr><td class=\"mono\">").Append(e.Time.ToString("MM-dd HH:mm:ss")).Append("</td><td>")
-                     .Append("<span class=\"chip ").Append(lv == "错误" ? "c-bad" : (lv == "警告" ? "c-warn" : "c-info")).Append("\">")
+                     .Append("<span class=\"chip ").Append(lv == "Error" ? "c-bad" : (lv == "Warning" ? "c-warn" : "c-info")).Append("\">")
                      .Append(H(lv)).Append("</span></td><td class=\"src\">").Append(H(e.Provider))
                      .Append("</td><td class=\"mono\">").Append(e.Id).Append("</td><td>")
                      .Append(H(desc));
@@ -119,67 +119,67 @@ namespace LogCollector
                 }
                 if (skipped > 0)
                 {
-                    b.Append("<tr><td colspan=\"5\" class=\"msg\">另有 ").Append(skipped)
-                     .Append(" 条同类或较早的事件未逐条列出，完整内容见 10_系统日志 与 11_应用程序日志 中的 CSV。</td></tr>");
+                    b.Append("<tr><td colspan=\"5\" class=\"msg\">").Append(skipped)
+                     .Append(" more similar or older events are not listed; see the CSVs in 10_System_Logs and 11_Application_Logs.</td></tr>");
                 }
                 b.Append("</tbody></table>");
             }
             b.Append("</div>");
 
-            // ---------- 采集结果 ----------
-            b.Append("<div class=\"card\"><div class=\"card-t\">采集项执行结果</div><table class=\"tl\">");
-            b.Append("<thead><tr><th style=\"width:260px\">采集项</th><th style=\"width:80px\">状态</th><th style=\"width:90px\">体积</th><th>说明</th></tr></thead><tbody>");
+            // ---------- collection results ----------
+            b.Append("<div class=\"card\"><div class=\"card-t\">Collection results</div><table class=\"tl\">");
+            b.Append("<thead><tr><th style=\"width:260px\">Item</th><th style=\"width:80px\">Status</th><th style=\"width:90px\">Size</th><th>Note</th></tr></thead><tbody>");
             foreach (JobResult r in results)
             {
                 string cls = r.Status == JobStatus.Success ? "ok" : (r.Status == JobStatus.Failed ? "bad" : "warn");
-                string txt = r.Status == JobStatus.Success ? "成功" : (r.Status == JobStatus.Failed ? "失败" : (r.Status == JobStatus.Skipped ? "跳过" : "未完成"));
+                string txt = r.Status == JobStatus.Success ? "Success" : (r.Status == JobStatus.Failed ? "Failed" : (r.Status == JobStatus.Skipped ? "Skipped" : "Incomplete"));
                 b.Append("<tr><td>").Append(H(r.Name)).Append("</td><td><span class=\"chip c-").Append(cls).Append("\">")
                  .Append(txt).Append("</span></td><td class=\"mono\">").Append(r.Bytes > 0 ? Tool.FmtSize(r.Bytes) : "-")
                  .Append("</td><td class=\"msg\">").Append(H(r.Message)).Append("</td></tr>");
             }
             b.Append("</tbody></table></div>");
 
-            // ---------- 硬件信息 ----------
-            b.Append("<div class=\"card\"><div class=\"card-t\">硬件与系统信息</div><table class=\"kv\">");
-            Kv(b, "机型", s.Info.Display());
-            Kv(b, "序列号", s.Info.Serial);
+            // ---------- hardware ----------
+            b.Append("<div class=\"card\"><div class=\"card-t\">Hardware and system</div><table class=\"kv\">");
+            Kv(b, "Model", s.Info.Display());
+            Kv(b, "Serial", s.Info.Serial);
             Kv(b, "BIOS", s.Info.Bios + (s.Info.BiosDate.Length > 0 ? "（" + s.Info.BiosDate + "）" : ""));
-            Kv(b, "主板", s.Info.Board);
+            Kv(b, "Board", s.Info.Board);
             Kv(b, "CPU", s.Info.Cpu + (s.Info.CpuCores.Length > 0 ? " / " + s.Info.CpuCores : ""));
-            Kv(b, "内存", s.Info.RamGB > 0 ? s.Info.RamGB + " GB" : "");
+            Kv(b, "Memory", s.Info.RamGB > 0 ? s.Info.RamGB + " GB" : "");
             string mem = ProbeJoin(s, "MEM.");
-            if (mem.Length > 0) Kv(b, "内存条", mem);
+            if (mem.Length > 0) Kv(b, "Memory modules", mem);
             string gpu = ProbeJoin(s, "GPU.");
-            if (gpu.Length > 0) Kv(b, "显卡", gpu);
+            if (gpu.Length > 0) Kv(b, "Graphics", gpu);
             string disk = ProbeJoin(s, "DISK.");
-            if (disk.Length > 0) Kv(b, "磁盘", disk);
-            Kv(b, "操作系统", s.Info.OsName + " " + s.Info.OsVersion + " Build " + s.Info.OsBuild);
-            Kv(b, "安装日期", s.Info.OsInstall);
-            Kv(b, "计算机名", s.Info.ComputerName);
+            if (disk.Length > 0) Kv(b, "Storage", disk);
+            Kv(b, "Operating system", s.Info.OsName + " " + s.Info.OsVersion + " Build " + s.Info.OsBuild);
+            Kv(b, "Installed", s.Info.OsInstall);
+            Kv(b, "Computer name", s.Info.ComputerName);
             b.Append("</table></div>");
 
-            // ---------- 电池 ----------
+            // ---------- Battery ----------
             string bat = BatteryBlock(s);
             if (bat.Length > 0)
-                b.Append("<div class=\"card\"><div class=\"card-t\">电池与电源</div>").Append(bat).Append("</div>");
+                b.Append("<div class=\"card\"><div class=\"card-t\">Battery and power</div>").Append(bat).Append("</div>");
 
-            // ---------- 电源与睡眠设置 ----------
+            // ---------- power and sleep settings ----------
             string pwr = PowerBlock(s);
             if (pwr.Length > 0)
-                b.Append("<div class=\"card\"><div class=\"card-t\">电源与睡眠设置 <span class=\"hint\">当前电源方案，单位见括号</span></div>")
+                b.Append("<div class=\"card\"><div class=\"card-t\">Power and sleep settings <span class=\"hint\">active power scheme</span></div>")
                  .Append(pwr).Append("</div>");
 
-            // ---------- 文件清单 ----------
-            b.Append("<div class=\"card\"><div class=\"card-t\">采集文件清单</div><table class=\"tl\">");
-            b.Append("<thead><tr><th style=\"width:300px\">目录 / 文件</th><th style=\"width:100px\">体积</th><th>说明</th></tr></thead><tbody>");
+            // ---------- file list ----------
+            b.Append("<div class=\"card\"><div class=\"card-t\">Collected files</div><table class=\"tl\">");
+            b.Append("<thead><tr><th style=\"width:300px\">Folder / file</th><th style=\"width:100px\">Size</th><th>Description</th></tr></thead><tbody>");
             try
             {
                 foreach (string d in Directory.GetDirectories(s.OutDir))
                 {
                     string name = Path.GetFileName(d);
-                    bool hasPage = File.Exists(Path.Combine(d, "浏览.html"));
+                    bool hasPage = File.Exists(Path.Combine(d, "browse.html"));
                     b.Append("<tr><td class=\"mono\">");
-                    if (hasPage) b.Append("<a href=\"").Append(H(name)).Append("/浏览.html\">").Append(H(name)).Append("/</a>");
+                    if (hasPage) b.Append("<a href=\"").Append(H(name)).Append("/browse.html\">").Append(H(name)).Append("/</a>");
                     else b.Append(H(name)).Append("/");
                     b.Append("</td><td class=\"mono\">")
                      .Append(Tool.FmtSize(Tool.DirSize(d))).Append("</td><td class=\"msg\">")
@@ -188,13 +188,13 @@ namespace LogCollector
             }
             catch { }
             b.Append("</tbody></table>");
-            b.Append("<div class=\"msg\" style=\"margin-top:8px\">所有文本类文件已汇总到 <a href=\"全部内容.html\">全部内容.html</a>，可在浏览器里直接查看，也可按目录单独打开。</div>");
+            b.Append("<div class=\"msg\" style=\"margin-top:8px\">All text files are also available in <a href=\"All_Content.html\">All_Content.html</a>, or per folder via browse.html.</div>");
             b.Append("</div>");
 
-            // ---------- 页脚 ----------
-            b.Append("<div class=\"ft\">本报告由笔记本日志采集工具 v" + H(Program.Version) + " 生成，内容为采集到的原始事实，不含推断性结论。");
-            b.Append("原始文件位于同目录下，可用事件查看器直接打开 <code>System.evtx</code> 与 <code>Application.evtx</code>。");
-            b.Append("报告可能包含个人信息，请按公司数据分级要求流转。</div>");
+            // ---------- footer ----------
+            b.Append("<div class=\"ft\">Generated by Laptop Log Collector v" + H(Program.Version) + ". The content is raw collected fact, not inference.");
+            b.Append("Raw files are in the same folder; <code>System.evtx</code> and <code>Application.evtx</code> open directly in Event Viewer.");
+            b.Append("This report may contain personal data; handle it according to your data classification policy.</div>");
             b.Append("</div></body></html>");
             return b.ToString();
         }
@@ -203,8 +203,8 @@ namespace LogCollector
         {
             bool any = false;
             StringBuilder b = new StringBuilder();
-            b.Append("<table class=\"tl\"><thead><tr><th style=\"width:240px\">项目</th>")
-             .Append("<th style=\"width:170px\">交流（插电）</th><th>电池供电</th></tr></thead><tbody>");
+            b.Append("<table class=\"tl\"><thead><tr><th style=\"width:240px\">Setting</th>")
+             .Append("<th style=\"width:170px\">AC (plugged in)</th><th>DC (battery)</th></tr></thead><tbody>");
             foreach (string[] item in Jobs.PowerItems)
             {
                 string k = "PWR." + item[0] + "_ac";
@@ -218,7 +218,7 @@ namespace LogCollector
             }
             b.Append("</tbody></table>");
             if (!any) return "";
-            b.Append("<div class=\"msg\" style=\"margin-top:6px\">睡眠 / 休眠 / 关屏为“无操作后经过多少时间触发”；「从不」表示不会自动触发。</div>");
+            b.Append("<div class=\"msg\" style=\"margin-top:6px\">Sleep / hibernate / display-off are idle timeouts; \"Never\" means they do not trigger automatically.</div>");
             return b.ToString();
         }
 
@@ -232,16 +232,16 @@ namespace LogCollector
             if (des.Length == 0 && full.Length == 0 && charge.Length == 0) return "";
             StringBuilder b = new StringBuilder();
             b.Append("<table class=\"kv\">");
-            Kv(b, "电池型号", name);
+            Kv(b, "Battery", name);
             int d, f;
             if (int.TryParse(des, out d) && int.TryParse(full, out f) && d > 0)
             {
                 int pct = (int)Math.Round(f * 100.0 / d);
-                Kv(b, "设计容量 / 满充容量", d + " mWh / " + f + " mWh");
-                Kv(b, "健康度", pct + "%" + (pct < 80 ? "（偏低，建议关注）" : ""));
+                Kv(b, "Design / full charge", d + " mWh / " + f + " mWh");
+                Kv(b, "Health", pct + "%" + (pct < 80 ? " (low, needs attention)" : ""));
             }
-            Kv(b, "循环次数", cyc);
-            Kv(b, "当前电量", charge.Length > 0 ? charge + "%" : "");
+            Kv(b, "Cycle count", cyc);
+            Kv(b, "Charge level", charge.Length > 0 ? charge + "%" : "");
             b.Append("</table>");
             return b.ToString();
         }
@@ -253,34 +253,34 @@ namespace LogCollector
             if (bug > 0)
             {
                 EventRow last = LastBugCheck(s);
-                list.Add(new Finding("bad", "检测到 " + bug + " 次蓝屏（BugCheck 记录），最近一次 "
-                    + (last != null ? last.Time.ToString("MM-dd HH:mm") + "，停止代码 " + BugCode(last.Message) : "") +
-                    "。请把 Minidump 目录下的转储文件一并提供给研发。"));
+                list.Add(new Finding("bad", bug + " blue screen(s) recorded (BugCheck), most recent "
+                    + (last != null ? last.Time.ToString("MM-dd HH:mm") + ", stop code " + BugCode(last.Message) : "") +
+                    ". Please include the dump files from the Minidump folder."));
             }
             int shut = CountAny(s, new int[] { 41, 6008 });
             if (shut > 0)
-                list.Add(new Finding("bad", "检测到 " + shut + " 次异常关机（断电、死机或长按电源），可能伴随数据丢失。"));
+                list.Add(new Finding("bad", shut + " unexpected shutdown(s) (power loss, hang or power button); data loss is possible."));
             int whea = CountAny(s, new int[] { 17, 18, 19, 47 });
             if (whea > 0)
-                list.Add(new Finding("bad", "检测到 " + whea + " 条 WHEA 硬件错误记录，指向 CPU / 内存 / PCIe 的硬件层问题。"));
+                list.Add(new Finding("bad", whea + " WHEA hardware error record(s), pointing at CPU / memory / PCIe level issues."));
             int tdr = Count(s, 4101);
             if (tdr > 0)
-                list.Add(new Finding("warn", "显示驱动超时恢复（TDR）" + tdr + " 次，表现为短暂黑屏、花屏或驱动重置。"));
+                list.Add(new Finding("warn", tdr + " display driver timeout recovery (TDR); symptoms are brief black screens, artifacts or driver resets."));
             int drv = CountAny(s, new int[] { 219, 411 });
             if (drv > 0)
-                list.Add(new Finding("warn", "驱动加载失败 / 设备未能启动 " + drv + " 次，请对照「驱动与设备」中的异常设备清单。"));
+                list.Add(new Finding("warn", drv + " driver load / device start failure(s); see the problem device list under Drivers and devices."));
             int svc = CountAny(s, new int[] { 7000, 7001, 7031, 7034 });
             if (svc > 0)
-                list.Add(new Finding("warn", "服务启动失败或意外终止 " + svc + " 次，可能影响开机速度与后台功能。"));
+                list.Add(new Finding("warn", svc + " service start failure or unexpected termination(s); may affect boot time and background features."));
             int disk = CountAny(s, new int[] { 7, 11, 51, 129 });
             if (disk > 0)
-                list.Add(new Finding("bad", "磁盘错误事件 " + disk + " 条（坏块 / 控制器错误 / 设备重置），建议立即检查存储健康。"));
+                list.Add(new Finding("bad", disk + " disk error event(s) (bad blocks / controller errors / resets); check storage health."));
             int th = Count(s, 37);
             if (th > 0)
-                list.Add(new Finding("warn", "处理器性能受固件限制（降频）" + th + " 次，可能由温度或电源策略触发。"));
+                list.Add(new Finding("warn", th + " processor throttling event(s) caused by firmware; may be triggered by temperature or power policy."));
             int appCrash = CountApp(s);
             if (appCrash > 0)
-                list.Add(new Finding("warn", "应用程序崩溃或未响应 " + appCrash + " 次（近 7 天），详情见 11_应用程序日志。"));
+                list.Add(new Finding("warn", appCrash + " application crash or hang(s) in the last 7 days; see 11_Application_Logs."));
             int pnp = CountProbe(s, "PNP.");
             if (pnp > 0)
             {
@@ -289,13 +289,13 @@ namespace LogCollector
                 {
                     if (kv.Key.StartsWith("PNP.") && names.Count < 5) names.Add(kv.Key.Substring(4));
                 }
-                list.Add(new Finding("warn", "发现 " + pnp + " 个设备存在驱动错误码：" + string.Join("、", names.ToArray()) + "。"));
+                list.Add(new Finding("warn", pnp + " device(s) report a driver error code: " + string.Join(", ", names.ToArray()) + "."));
             }
-            int dumps = CountFiles(Path.Combine(s.OutDir, "30_崩溃转储"), "*.dmp", true);
+            int dumps = CountFiles(Path.Combine(s.OutDir, "30_Crash_Dumps"), "*.dmp", true);
             if (dumps > 0)
-                list.Add(new Finding("info", "已收集 " + dumps + " 个内存转储文件，可用 WinDbg / BlueScreenView 分析。"));
+                list.Add(new Finding("info", dumps + " memory dump file(s) collected; analyse with WinDbg or BlueScreenView."));
             if (dumps == 0 && bug > 0)
-                list.Add(new Finding("warn", "存在蓝屏记录但没有找到转储文件（可能转储功能被关闭或被清理），建议开启「内核内存转储」后复现。"));
+                list.Add(new Finding("warn", "Blue screen records exist but no dump file was found (dumps may be disabled or cleaned up). Enable a kernel memory dump and reproduce."));
 
             string des = Get(s, "BAT.DesignedCapacity");
             string full = Get(s, "BAT.FullChargedCapacity");
@@ -304,19 +304,19 @@ namespace LogCollector
             {
                 int pct = (int)Math.Round(f * 100.0 / d);
                 if (pct < 80)
-                    list.Add(new Finding("warn", "电池健康度 " + pct + "%（满充容量 " + f + " mWh / 设计容量 " + d + " mWh），低于 80% 时续航问题多与电池老化相关。"));
+                    list.Add(new Finding("warn", "Battery health is " + pct + "% (full charge " + f + " mWh / design " + d + " mWh); below 80% runtime issues are usually battery wear."));
             }
             if (list.Count == 0)
-                list.Add(new Finding("info", "未发现蓝屏、异常关机、硬件错误、驱动失败或磁盘告警等记录。"));
+                list.Add(new Finding("info", "No blue screens, unexpected shutdowns, hardware errors, driver failures or disk warnings were found."));
             return list;
         }
 
         private static string BugCode(string msg)
         {
-            if (string.IsNullOrEmpty(msg)) return "未知";
+            if (string.IsNullOrEmpty(msg)) return "Unknown";
             Match m = Regex.Match(msg, "0x[0-9a-fA-F]{8,16}");
             if (m.Success) return m.Value.ToUpperInvariant();
-            return "未知";
+            return "Unknown";
         }
 
         private static int Count(Session s, int id)
@@ -405,27 +405,27 @@ namespace LogCollector
 
         private static string Explain(string dir)
         {
-            if (dir.StartsWith("10")) return "系统事件日志原始文件与关键事件表";
-            if (dir.StartsWith("11")) return "应用程序事件日志与崩溃记录";
-            if (dir.StartsWith("20")) return "系统信息、硬件明细、系统摘要";
-            if (dir.StartsWith("21")) return "驱动清单、驱动库、异常设备";
-            if (dir.StartsWith("22")) return "进程、服务、启动项、计划任务快照";
-            if (dir.StartsWith("23")) return "补丁与已安装软件";
-            if (dir.StartsWith("24")) return "msinfo32 完整报告（可选）";
-            if (dir.StartsWith("30")) return "蓝屏转储文件（供 WinDbg 分析）";
-            if (dir.StartsWith("31")) return "Windows 错误报告（WER）";
-            if (dir.StartsWith("32")) return "完整内存转储（体积较大）";
-            if (dir.StartsWith("33")) return "进程内存转储（WinDbg 可直接打开）";
-            if (dir.StartsWith("40")) return "电池健康报告";
-            if (dir.StartsWith("41")) return "电源方案、睡眠能力、唤醒源";
-            if (dir.StartsWith("42")) return "能耗诊断（60 秒审计）";
-            if (dir.StartsWith("43")) return "现代待机（S0ix）诊断";
-            if (dir.StartsWith("50")) return "CPU / 内存 / 磁盘性能采样";
-            if (dir.StartsWith("60")) return "dxdiag 与显卡驱动信息";
-            if (dir.StartsWith("70")) return "网络配置、无线接口与驱动";
-            if (dir.StartsWith("71")) return "无线连接历史时间线";
-            if (dir.StartsWith("80")) return "磁盘与 SMART 健康";
-            if (dir.StartsWith("90")) return "用户指定的附加日志";
+            if (dir.StartsWith("10")) return "Raw system event log and key events table";
+            if (dir.StartsWith("11")) return "Application event log and crash records";
+            if (dir.StartsWith("20")) return "System info, hardware details, summary";
+            if (dir.StartsWith("21")) return "Driver list, driver store, problem devices";
+            if (dir.StartsWith("22")) return "Processes, services, startup, scheduled tasks";
+            if (dir.StartsWith("23")) return "Updates and installed software";
+            if (dir.StartsWith("24")) return "msinfo32 full report (optional)";
+            if (dir.StartsWith("30")) return "Crash dump files for WinDbg";
+            if (dir.StartsWith("31")) return "Windows Error Reporting (WER)";
+            if (dir.StartsWith("32")) return "Full memory dump (large)";
+            if (dir.StartsWith("33")) return "Process memory dump (opens in WinDbg)";
+            if (dir.StartsWith("40")) return "Battery health report";
+            if (dir.StartsWith("41")) return "Power scheme, sleep states, wake sources";
+            if (dir.StartsWith("42")) return "Energy audit (60 s)";
+            if (dir.StartsWith("43")) return "Modern Standby (S0ix) diagnostics";
+            if (dir.StartsWith("50")) return "CPU / memory / disk sampling";
+            if (dir.StartsWith("60")) return "dxdiag and graphics driver info";
+            if (dir.StartsWith("70")) return "Network config, Wi-Fi interfaces and drivers";
+            if (dir.StartsWith("71")) return "Wi-Fi connection history timeline";
+            if (dir.StartsWith("80")) return "Disk and SMART health";
+            if (dir.StartsWith("90")) return "Extra logs from the given folder";
             return "";
         }
 

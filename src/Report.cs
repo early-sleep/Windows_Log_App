@@ -40,6 +40,13 @@ namespace LogCollector
             Row(b, "Privilege", s.IsAdmin ? "Administrator" : "Standard user");
             b.Append("</table></div></div>");
 
+            // ---------- quick links ----------
+            b.Append("<div class=\"quick\">Key files:"
+                   + " <a href=\"10_System_Logs/System.evtx\">System.evtx</a>"
+                   + " <a href=\"11_Application_Logs/Application.evtx\">Application.evtx</a>"
+                   + " <a href=\"All_Content.html\">All content</a>"
+                   + " <a href=\"Collection_Info.txt\">Collection info</a></div>");
+
             // ---------- test context ----------
             if (!string.IsNullOrEmpty(s.Symptom))
             {
@@ -506,6 +513,9 @@ table.tl tr:hover td{background:#fafcff}
 table.kv{width:100%;border-collapse:collapse;font-size:13px}
 table.kv th{width:150px;text-align:left;color:#6b7280;font-weight:400;padding:6px 10px 6px 0;vertical-align:top;border-bottom:1px solid #f1f5f9}
 table.kv td{padding:6px 0;border-bottom:1px solid #f1f5f9;word-break:break-word}
+.quick{background:#eef3fb;border:1px solid #d7e3f4;border-radius:8px;padding:9px 14px;margin-bottom:16px;font-size:13px;color:#475569}
+.quick a{display:inline-block;margin:0 14px 0 0;padding:2px 10px;background:#fff;border:1px solid #c8d8ee;border-radius:12px;color:#1f3864;font-weight:600;text-decoration:none}
+.quick a:hover{background:#dfeafb;text-decoration:none}
 .empty{color:#6b7280;background:#f9fafb;padding:12px;border-radius:6px}
 .ft{margin-top:26px;padding-top:14px;border-top:1px solid #e5e7eb;color:#9ca3af;font-size:12px}
 .ft code{background:#f1f5f9;padding:1px 5px;border-radius:3px;color:#475569}

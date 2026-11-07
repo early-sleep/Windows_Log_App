@@ -398,7 +398,10 @@ namespace LogCollector
             _btnStop.Location = new Point(right - 120 - 78, 8);
             _btnReport.Location = new Point(right - 120 - 78 - 102, 8);
             _btnOpen.Location = new Point(right - 120 - 78 - 102 - 116, 8);
-            _txtOut.Width = Math.Max(120, right - 120 - 78 - 102 - 116 - 96 - 80);
+            int left = 118;
+            int avail = _btnOpen.Left - left - 12;
+            _txtOut.Location = new Point(left, 11);
+            _txtOut.Width = Math.Max(120, avail);
         }
 
         private int AddField(Panel p, string label, ref TextBox box, int y, bool multi)

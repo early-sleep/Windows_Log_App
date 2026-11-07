@@ -68,6 +68,8 @@ namespace LogCollector
 
             b.Append("<div class=\"layout\"><nav><div class=\"navt\">Contents</div><ul>");
             b.Append("<li><a href=\"report.html\">◂ Back to report</a></li>");
+            if (File.Exists(Path.Combine(s.OutDir, "10_System_Logs", "System.evtx")))
+                b.Append("<li><a href=\"10_System_Logs/System.evtx\">System.evtx</a></li>");
             List<string> names = new List<string>();
             foreach (string d in dirs)
             {

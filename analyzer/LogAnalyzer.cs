@@ -83,7 +83,7 @@ namespace LogAnalyzer
 
     internal static class Program
     {
-        private const string Version = "1.4";
+        private const string Version = "1.5";
         private static string _root;
         private static int _port;
 
@@ -116,6 +116,47 @@ namespace LogAnalyzer
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             Application.Run(new ServerForm(url, _root));
+        }
+
+        private static void PickFolderEndpoint(HttpListenerContext ctx)
+        {
+            string picked = PickFolder();
+            Json(ctx, picked == null ? "{\"path\":null}" : "{\"path\":" + J(picked) + "}");
+        }
+
+        /// <summary>在桌面上弹一个文件夹选择框（对话框必须在 UI 线程上创建）。</summary>
+        private static string PickFolder()
+        {
+            try
+            {
+                if (Application.OpenForms.Count == 0) return null;
+                Form owner = Application.OpenForms[0];
+                string result = null;
+                ManualResetEvent done = new ManualResetEvent(false);
+
+                owner.BeginInvoke(new Action(delegate()
+                {
+                    try
+                    {
+                        if (owner.WindowState == FormWindowState.Minimized)
+                            owner.WindowState = FormWindowState.Normal;
+                        owner.Activate();
+                        using (FolderBrowserDialog dlg = new FolderBrowserDialog())
+                        {
+                            dlg.Description = "Select the folder that contains the collected packages";
+                            dlg.ShowNewFolderButton = false;
+                            if (Directory.Exists(_root)) dlg.SelectedPath = _root;
+                            if (dlg.ShowDialog(owner) == DialogResult.OK) result = dlg.SelectedPath;
+                        }
+                    }
+                    catch { }
+                    finally { done.Set(); }
+                }));
+
+                if (!done.WaitOne(TimeSpan.FromMinutes(10))) return null;
+                return result;
+            }
+            catch { return null; }
         }
 
         private static void BeginShutdown()
@@ -199,6 +240,7 @@ namespace LogAnalyzer
             if (path == "/" || path == "/index.html") { ServeFile(ctx, "analyzer.html", "text/html; charset=utf-8"); return; }
             if (path == "/api/health" || path == "/api/ping") { Json(ctx, "{\"ok\":true,\"version\":\"" + Version + "\"}"); return; }
             if (path == "/api/shutdown") { Json(ctx, "{\"ok\":true}"); BeginShutdown(); return; }
+            if (path == "/api/pickfolder") { PickFolderEndpoint(ctx); return; }
             if (path == "/api/packages") { Packages(ctx); return; }
             if (path == "/api/tree") { Tree(ctx); return; }
             if (path == "/api/file") { FileText(ctx); return; }

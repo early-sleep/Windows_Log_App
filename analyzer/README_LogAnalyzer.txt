@@ -1,4 +1,4 @@
-Log Analyzer  v1.4
+Log Analyzer  v1.5
 ======================================================================
 
 1. What it is
@@ -32,7 +32,9 @@ for packages:
 By default it scans  Desktop\LogCollection  for sub-folders that contain
 report.html or Collection_Info.txt (what the collector produces).
 
-Type any other folder in the box at the top right and press "Scan".
+Type any other folder in the box at the top right and press "Scan",
+or press "Open..." to pick the folder in a Windows dialog (the dialog
+appears on top of the Log Analyzer window).
 
 4. Reading logs
 ----------------------------------------------------------------------

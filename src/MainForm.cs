@@ -22,7 +22,7 @@ namespace LogCollector
         private RichTextBox _log;
         private ProgressBar _bar;
         private Label _lblStatus, _lblMachine, _lblAdmin;
-        private Button _btnStart, _btnStop, _btnOpen, _btnReport, _btnElevate;
+        private Button _btnStart, _btnStop, _btnOpen, _btnReport, _btnElevate, _btnBrowse;
         private CancellationTokenSource _cts;
         private bool _running;
         private string _lastDir;
@@ -333,6 +333,12 @@ namespace LogCollector
             bottom.Controls.Add(_btnReport);
             EnableButton(_btnReport, false, Color.FromArgb(16, 185, 129));
 
+            _btnBrowse = MakeButton("Browse...", Color.FromArgb(107, 114, 128), Color.White);
+            _btnBrowse.Size = new Size(96, 34);
+            _btnBrowse.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _btnBrowse.Click += delegate { BrowseOutput(); };
+            bottom.Controls.Add(_btnBrowse);
+
             _btnOpen = MakeButton("Open folder", Color.FromArgb(107, 114, 128), Color.White);
             _btnOpen.Size = new Size(110, 34);
             _btnOpen.Anchor = AnchorStyles.Top | AnchorStyles.Right;
@@ -392,16 +398,17 @@ namespace LogCollector
 
         private void LayoutBottom()
         {
-            int w = Width - 40;
-            int right = w + 16;
-            _btnStart.Location = new Point(right - 120, 8);
-            _btnStop.Location = new Point(right - 120 - 78, 8);
-            _btnReport.Location = new Point(right - 120 - 78 - 102, 8);
-            _btnOpen.Location = new Point(right - 120 - 78 - 102 - 116, 8);
+            int right = Width - 40 + 16;
+            int gap = 6;
+            int x = right;
+            x -= _btnStart.Width; _btnStart.Location = new Point(x, 8);
+            x -= _btnStop.Width + gap; _btnStop.Location = new Point(x, 8);
+            x -= _btnReport.Width + gap; _btnReport.Location = new Point(x, 8);
+            x -= _btnOpen.Width + gap; _btnOpen.Location = new Point(x, 8);
+            x -= _btnBrowse.Width + gap; _btnBrowse.Location = new Point(x, 8);
             int left = 118;
-            int avail = _btnOpen.Left - left - 12;
             _txtOut.Location = new Point(left, 11);
-            _txtOut.Width = Math.Max(120, avail);
+            _txtOut.Width = Math.Max(120, x - left - 12);
         }
 
         private int AddField(Panel p, string label, ref TextBox box, int y, bool multi)
@@ -642,6 +649,22 @@ namespace LogCollector
                 "Collection finished.\r\n\r\nOpen the HTML report now?\r\nLocation: " + _lastDir,
                 "Done", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
             if (r == DialogResult.Yes) OpenReport();
+        }
+
+        private void BrowseOutput()
+        {
+            using (FolderBrowserDialog f = new FolderBrowserDialog())
+            {
+                f.Description = "Select the folder where collected packages are saved";
+                f.ShowNewFolderButton = true;
+                string cur = _txtOut.Text.Trim();
+                if (cur.Length > 0 && Directory.Exists(cur)) f.SelectedPath = cur;
+                if (f.ShowDialog(this) == DialogResult.OK)
+                {
+                    _txtOut.Text = f.SelectedPath;
+                    _txtOut.SelectionStart = _txtOut.TextLength;
+                }
+            }
         }
 
         private void OpenReport()

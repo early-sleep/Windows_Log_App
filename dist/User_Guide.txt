@@ -1,4 +1,4 @@
-Laptop Log Collector  v1.7
+Laptop Log Collector  v1.8
 ======================================================================
 
 1. What this is
@@ -22,7 +22,9 @@ The interface and all generated reports are in English.
 ----------------------------------------------------------------------
 1) Double-click LogCollector.exe
 2) Tick what to collect (the common set is already ticked)
-3) Click "Start collection" and wait for the progress bar
+3) Optionally change the output folder: type a path, or press "Browse..."
+   to pick one (the default is Desktop\LogCollection)
+4) Click "Start collection" and wait for the progress bar
 
 An "Open the HTML report now?" prompt appears when done.
 

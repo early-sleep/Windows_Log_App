@@ -83,6 +83,7 @@ label.set input{width:100%;max-width:520px;padding:8px 10px;border:1px solid #d5
   <span class="sub">pick a collected package, select logs, ask AI</span>
   <span class="spacer"></span>
   <input id="root" placeholder="package root, e.g. C:\Users\me\Desktop\LogCollection">
+  <button id="pickBtn" onclick="pickFolder()">Open...</button>
   <button onclick="scan()">Scan</button>
 </header>
 <main>
@@ -211,6 +212,16 @@ function saveSettings(){
   localStorage.setItem('la.settings', JSON.stringify(getSettings()));
   $('saveInfo').textContent = ' saved ' + new Date().toLocaleTimeString();
   refreshMeta();
+}
+
+function pickFolder(){
+  var b = $('pickBtn');
+  b.disabled = true; b.textContent = 'selecting...';
+  api('/api/pickfolder').then(function(r){ return r.json(); }).then(function(d){
+    if (d && d.path) { $('root').value = d.path; scan(); }
+  }).catch(function(){}).then(function(){
+    b.disabled = false; b.textContent = 'Open...';
+  });
 }
 
 function scan(){

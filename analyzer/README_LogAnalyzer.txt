@@ -1,4 +1,4 @@
-Log Analyzer  v1.3
+Log Analyzer  v1.4
 ======================================================================
 
 1. What it is
@@ -68,7 +68,8 @@ Open the "Settings" tab and fill in:
             OpenAI     https://api.openai.com/v1
             Ollama     http://localhost:11434/v1   (local, no key needed)
   API key   your key; it stays in this browser's local storage
-  Model     e.g. deepseek-chat, gpt-4o-mini, qwen2.5:14b
+  Model     e.g. deepseek-chat (DeepSeek), gpt-4o-mini (OpenAI),
+            qwen2.5:14b (Ollama)
 
 Characters per file / total characters control how much text is sent,
 which keeps the request inside the model's context window.
@@ -76,7 +77,18 @@ which keeps the request inside the model's context window.
 Nothing is uploaded to us; the selected text goes only to the endpoint
 you typed in.
 
-7. Troubleshooting "Failed to fetch"
+7. Troubleshooting API errors
+----------------------------------------------------------------------
+The page shows the message returned by the API, for example
+
+  API call failed. HTTP 401: Authentication Fails ... is invalid
+      -> the key is wrong, expired, or truncated when pasted
+  API call failed. HTTP 400: The supported API model names are ...
+      -> the Model field in Settings does not match your account
+  API call failed: cannot connect to the remote server
+      -> no network access to the endpoint (proxy / firewall)
+
+8. Troubleshooting "Failed to fetch"
 ----------------------------------------------------------------------
 That message means the page cannot reach LogAnalyzer.exe.
 
@@ -89,7 +101,7 @@ If the window is still open and it still fails:
     port (8787-8826) and the correct address is shown in its window;
   * check analyzer.log next to the exe: every request is logged there.
 
-8. Limitations
+9. Limitations
 ----------------------------------------------------------------------
 * .evtx and .dmp cannot be read by the page - analyse them with Event
   Viewer and WinDbg. The collector already exports key_events.csv,

@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Globalization;
@@ -82,7 +83,7 @@ namespace LogAnalyzer
 
     internal static class Program
     {
-        private const string Version = "1.3";
+        private const string Version = "1.4";
         private static string _root;
         private static int _port;
 
@@ -397,19 +398,42 @@ namespace LogAnalyzer
             catch (WebException wex)
             {
                 string detail = wex.Message;
+                string status = "";
                 try
                 {
-                    if (wex.Response != null)
-                        using (StreamReader sr = new StreamReader(wex.Response.GetResponseStream(), Encoding.UTF8))
+                    HttpWebResponse r2 = wex.Response as HttpWebResponse;
+                    if (r2 != null)
+                    {
+                        status = "HTTP " + (int)r2.StatusCode + " " + r2.StatusDescription + ": ";
+                        using (StreamReader sr = new StreamReader(r2.GetResponseStream(), Encoding.UTF8))
                             detail = sr.ReadToEnd();
+                    }
                 }
                 catch { }
-                Json(ctx, "{\"error\":" + J("API call failed: " + detail) + "}");
+                Json(ctx, "{\"error\":" + J("API call failed. " + status + FriendlyError(detail)) + "}");
             }
             catch (Exception ex)
             {
                 Json(ctx, "{\"error\":" + J("API call failed: " + ex.Message) + "}");
             }
+        }
+
+        /// <summary>把 API 返回的错误 JSON 提炼成一句人话。</summary>
+        private static string FriendlyError(string raw)
+        {
+            if (string.IsNullOrEmpty(raw)) return "no response from the API";
+            try
+            {
+                JavaScriptSerializer js = new JavaScriptSerializer();
+                js.MaxJsonLength = 16 * 1024 * 1024;
+                object root = js.DeserializeObject(raw);
+                object msg = GetPath(root, "error", "message");
+                if (msg != null) return Convert.ToString(msg);
+                object err = GetPath(root, "error");
+                if (err != null) return Convert.ToString(err);
+            }
+            catch { }
+            return Clip(raw, 400);
         }
 
         private static string ExtractAnswer(string raw)
@@ -418,31 +442,62 @@ namespace LogAnalyzer
             js.MaxJsonLength = 64 * 1024 * 1024;
             try
             {
-                Dictionary<string, object> r = js.Deserialize<Dictionary<string, object>>(raw);
-                object choicesObj;
-                if (r.TryGetValue("choices", out choicesObj) && choicesObj is object[])
+                object root = js.DeserializeObject(raw);
+
+                object content = GetPath(root, "choices", 0, "message", "content");
+                string text = content == null ? "" : Convert.ToString(content);
+                if (text.Trim().Length == 0)
                 {
-                    object[] choices = (object[])choicesObj;
-                    if (choices.Length > 0 && choices[0] is Dictionary<string, object>)
-                    {
-                        Dictionary<string, object> c0 = (Dictionary<string, object>)choices[0];
-                        object msgObj;
-                        if (c0.TryGetValue("message", out msgObj) && msgObj is Dictionary<string, object>)
-                        {
-                            object content;
-                            if (((Dictionary<string, object>)msgObj).TryGetValue("content", out content))
-                                return "{\"content\":" + J(Convert.ToString(content)) + "}";
-                        }
-                    }
+                    // reasoning models put the visible text here when content is empty
+                    object reasoning = GetPath(root, "choices", 0, "message", "reasoning_content");
+                    if (reasoning != null) text = Convert.ToString(reasoning);
                 }
-                object err;
-                if (r.TryGetValue("error", out err)) return "{\"error\":" + J(Convert.ToString(err)) + "}";
-                return "{\"error\":" + J("Unexpected API response: " + Clip(raw, 400)) + "}";
+                if (text.Trim().Length > 0)
+                    return "{\"content\":" + J(text) + "}";
+
+                object errMsg = GetPath(root, "error", "message");
+                if (errMsg != null)
+                    return "{\"error\":" + J(Convert.ToString(errMsg)) + "}";
+                object errObj = GetPath(root, "error");
+                if (errObj != null)
+                    return "{\"error\":" + J(Convert.ToString(errObj)) + "}";
+
+                return "{\"error\":" + J("The API returned no text. Raw response: " + Clip(raw, 400)) + "}";
             }
-            catch
+            catch (Exception ex)
             {
-                return "{\"error\":" + J("Unexpected API response: " + Clip(raw, 400)) + "}";
+                return "{\"error\":" + J("Cannot parse the API response (" + ex.Message + "). Raw: " + Clip(raw, 300)) + "}";
             }
+        }
+
+        /// <summary>按路径取值，同时支持 Dictionary 与 ArrayList/object[] 两种反序列化结果。</summary>
+        private static object GetPath(object node, params object[] path)
+        {
+            foreach (object step in path)
+            {
+                if (node == null) return null;
+
+                IDictionary<string, object> dict = node as IDictionary<string, object>;
+                string key = step as string;
+                if (dict != null && key != null)
+                {
+                    object next;
+                    dict.TryGetValue(key, out next);
+                    node = next;
+                    continue;
+                }
+
+                IList list = node as IList;
+                if (list != null && step is int)
+                {
+                    int i = (int)step;
+                    node = (i >= 0 && i < list.Count) ? list[i] : null;
+                    continue;
+                }
+
+                return null;
+            }
+            return node;
         }
 
         private static string Str(Dictionary<string, object> d, string key, string fallback)

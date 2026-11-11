@@ -223,7 +223,9 @@ function openPkg(i){
   fetch('/api/tree?path=' + encodeURIComponent(p.path)).then(function(r){ return r.json(); }).then(function(d){
     state.files = d.files || [];
     renderTree();
-    if (/[?&]sel=core/.test(location.search)) selectCore();
+    var m = location.search.match(/[?&]open=([^&]+)/);
+    if (m) { preview(decodeURIComponent(m[1])); showTab('preview'); }
+    else if (/[?&]sel=core/.test(location.search)) selectCore();
     else if (/[?&]sel=all/.test(location.search)) selectAllText();
   }).catch(function(e){ $('tree').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
 }
@@ -231,7 +233,7 @@ function openPkg(i){
 function renderTree(){
   var groups = {};
   state.files.forEach(function(f){
-    var rel = f.rel.replace(/\\/g,'/');
+    var rel = f.rel.replace(/\\/g, '/');
     var top = rel.indexOf('/') >= 0 ? rel.split('/')[0] : '(root)';
     (groups[top] = groups[top] || []).push(f);
   });
@@ -239,31 +241,48 @@ function renderTree(){
   Object.keys(groups).sort().forEach(function(g){
     var items = groups[g];
     var sel = items.filter(function(f){ return state.sel[f.rel]; }).length;
-    h += '<div class="grp" onclick="toggleGroup(\'' + esc(g).replace(/'/g,"\\'") + '\', this)">' +
-         '<span class="caret">&#9656;</span><span>' + esc(g) + '</span>' +
-         '<span class="cnt">' + items.length + (sel?(' · '+sel+' selected'):'') + '</span></div>';
-    h += '<div class="body" data-g="' + esc(g) + '" style="display:none">';
+    h += '<div class="grp" data-g="' + esc(g) + '"><span class="caret">&#9656;</span>' +
+         '<span>' + esc(g) + '</span><span class="cnt">' + items.length +
+         (sel ? (' · ' + sel + ' selected') : '') + '</span></div>';
+    h += '<div class="body" style="display:none">';
     items.forEach(function(f){
-      var isText = f.kind === 'text' || f.kind === 'html';
+      var isText = (f.kind === 'text' || f.kind === 'html');
       if (isText) {
-        h += '<label class="f"><input type="checkbox" ' + (state.sel[f.rel]?'checked':'') +
-             ' onchange="toggleSel(this)" data-rel="' + esc(f.rel) + '">' +
-             '<span class="nm" onclick="preview(event,\'' + esc(f.rel).replace(/'/g,"\\'") + '\')">' + esc(f.name) + '</span>' +
-             '<span class="sz">' + fmt(f.size) + '</span></label>';
+        h += '<div class="f" data-rel="' + esc(f.rel) + '">' +
+             '<input type="checkbox" ' + (state.sel[f.rel] ? 'checked' : '') +
+             ' data-rel="' + esc(f.rel) + '">' +
+             '<span class="nm">' + esc(f.name) + '</span>' +
+             '<span class="sz">' + fmt(f.size) + '</span></div>';
       } else {
-        h += '<div class="f bin" title="binary, not sent to AI"><span class="nm">' + esc(f.name) + '</span><span class="sz">' + fmt(f.size) + '</span></div>';
+        h += '<div class="f bin"><span class="nm">' + esc(f.name) + '</span>' +
+             '<span class="sz">' + fmt(f.size) + '</span></div>';
       }
     });
     h += '</div>';
   });
   $('tree').innerHTML = h || '<div class="hint" style="margin:14px">No files.</div>';
   refreshMeta();
-  var first = Object.keys(groups).sort()[0];
-  if (first) { var el = document.querySelector('.grp[onclick*="' + first.replace(/"/g,'\\"') + '"]'); }
 }
 
-function toggleGroup(name, el){
+function onTreeClick(e){
+  var grp = e.target.closest ? e.target.closest('.grp') : null;
+  if (grp) { toggleGroup(grp); return; }
+  var row = e.target.closest ? e.target.closest('.f') : null;
+  if (!row) return;
+  if (e.target.tagName === 'INPUT') return;      // checkbox handled by change
+  var rel = row.getAttribute('data-rel');
+  if (rel) preview(rel);
+}
+
+function onTreeChange(e){
+  var t = e.target;
+  if (!t || t.type !== 'checkbox' || !t.closest('.f')) return;
+  toggleSel(t);
+}
+
+function toggleGroup(el){
   var body = el.nextElementSibling;
+  if (!body) return;
   var open = body.style.display === 'none';
   body.style.display = open ? 'block' : 'none';
   var c = el.querySelector('.caret');
@@ -271,9 +290,11 @@ function toggleGroup(name, el){
 }
 
 function toggleSel(cb){
-  if (cb.checked) state.sel[cb.dataset.rel] = true;
-  else delete state.sel[cb.dataset.rel];
+  var rel = cb.getAttribute('data-rel');
+  if (!rel) return;
+  if (cb.checked) state.sel[rel] = true; else delete state.sel[rel];
   refreshMeta();
+  if (cb.checked) preview(rel);
 }
 
 function selectCore(){
@@ -320,18 +341,16 @@ function refreshMeta(){
   $('aiMeta').textContent = n ? (n + ' file(s), ' + fmt(bytes) + ' on disk') : 'no files selected';
 }
 
-function preview(ev, rel){
-  ev.stopPropagation();
-  if (ev.target.tagName === 'INPUT') return;
+function preview(rel){
   $('previewHint').style.display = 'none';
   var pre = $('preview');
   pre.style.display = 'block';
-  if (state.cache[rel]) { pre.textContent = state.cache[rel]; return; }
-  pre.textContent = 'Loading...';
+  if (state.cache[rel] !== undefined) { pre.textContent = state.cache[rel]; return; }
+  pre.textContent = 'Loading ' + rel + ' ...';
   fetch('/api/file?path=' + encodeURIComponent(state.pkg) + '&rel=' + encodeURIComponent(rel))
     .then(function(r){ return r.json(); })
     .then(function(d){
-      var t = d.error ? ('[error] ' + d.error) : d.text;
+      var t = d.error ? ('[error] ' + d.error + '\n\nfile: ' + rel) : d.text;
       state.cache[rel] = t;
       pre.textContent = t;
     }).catch(function(e){ pre.textContent = '[error] ' + e.message; });
@@ -443,8 +462,11 @@ function downloadAnswer(){
 }
 
 loadSettings();
+$('tree').addEventListener('click', onTreeClick);
+$('tree').addEventListener('change', onTreeChange);
 if (location.hash === '#ai') showTab('ai');
 scan();
+
 </script>
 </body>
 </html>

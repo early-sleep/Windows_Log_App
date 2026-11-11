@@ -13,7 +13,7 @@ namespace LogAnalyzer
 {
     internal static class Program
     {
-        private const string Version = "1.0";
+        private const string Version = "1.1";
         private static string _root;
         private static int _port;
 
@@ -167,6 +167,7 @@ namespace LogAnalyzer
                     if (count++ > 5000) break;
                     string rel = f.Substring(pkg.Length).TrimStart('\\');
                     if (rel.EndsWith("browse.html", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (rel.EndsWith("All_Content.html", StringComparison.OrdinalIgnoreCase)) continue;
                     FileInfo fi = new FileInfo(f);
                     string kind = TextKind(fi.Extension);
                     if (!first) sb.Append(',');

@@ -8,6 +8,8 @@
 *{box-sizing:border-box}
 body{margin:0;height:100vh;overflow:hidden;background:#f4f6fa;color:#1f2937;font:14px/1.55 'Segoe UI','Microsoft YaHei',system-ui,sans-serif}
 button{font:inherit;cursor:pointer}
+#offline{display:none;position:fixed;top:0;left:0;right:0;z-index:99;background:#fef2f2;border-bottom:1px solid #fecaca;color:#991b1b;padding:10px 16px;font-size:13px}
+#offline button{margin-left:10px;padding:4px 12px;border:1px solid #fca5a5;background:#fff;border-radius:5px;color:#991b1b}
 header{height:58px;display:flex;align-items:center;gap:12px;padding:0 18px;background:#1f3864;color:#fff}
 header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.02em}
 header .sub{font-size:12px;color:#b8c8e4}
@@ -71,6 +73,7 @@ label.set input{width:100%;max-width:520px;padding:8px 10px;border:1px solid #d5
 </style>
 </head>
 <body>
+<div id="offline" style="display:none"><b>Lost connection to the local server.</b> LogAnalyzer.exe may have been closed - start it again (or keep its window open) and press Retry. <button onclick="location.reload()">Retry</button></div>
 <header>
   <h1>Log Analyzer</h1>
   <span class="sub">pick a collected package, select logs, ask AI</span>
@@ -142,6 +145,12 @@ label.set input{width:100%;max-width:520px;padding:8px 10px;border:1px solid #d5
         <span class="meta" id="saveInfo"></span>
         <p class="meta" style="margin-top:14px">The key is stored in this browser only and sent straight to the endpoint above. Nothing is uploaded anywhere else.</p>
       </div>
+      <div class="card">
+        <h3>Server</h3>
+        <p class="meta">The page is served by LogAnalyzer.exe on this machine. Closing its console window stops it.</p>
+        <button class="btn ghost" onclick="stopServer()">Stop the local server</button>
+        <span class="meta" id="stopInfo"></span>
+      </div>
     </div>
   </section>
 </main>
@@ -158,6 +167,14 @@ var PRESETS = [
 
 function $(id){ return document.getElementById(id); }
 function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function showOffline(){ var o = $('offline'); if (o) o.style.display = 'block'; }
+function hideOffline(){ var o = $('offline'); if (o) o.style.display = 'none'; }
+
+function api(url, opts){
+  return fetch(url, opts).then(function(r){ hideOffline(); return r; })
+                         .catch(function(e){ showOffline(); throw e; });
+}
+
 function fmt(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
 
 document.querySelectorAll('.tab').forEach(function(t){
@@ -196,7 +213,7 @@ function scan(){
   var root = $('root').value.trim();
   var url = '/api/packages' + (root ? '?root=' + encodeURIComponent(root) : '');
   $('tree').innerHTML = '<div class="hint" style="margin:14px">Scanning...</div>';
-  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+  api(url).then(function(r){ return r.json(); }).then(function(d){
     $('root').value = d.root || root;
     if(!d.packages || !d.packages.length){
       $('tree').innerHTML = '<div class="hint" style="margin:14px">No package found under<br><b>' + esc(d.root||'') +
@@ -220,7 +237,7 @@ function openPkg(i){
   state.pkg = p.path; state.sel = {}; state.cache = {};
   $('pkgName').textContent = p.name;
   $('tree').innerHTML = '<div class="hint" style="margin:14px">Loading tree...</div>';
-  fetch('/api/tree?path=' + encodeURIComponent(p.path)).then(function(r){ return r.json(); }).then(function(d){
+  api('/api/tree?path=' + encodeURIComponent(p.path)).then(function(r){ return r.json(); }).then(function(d){
     state.files = d.files || [];
     renderTree();
     var m = location.search.match(/[?&]open=([^&]+)/);
@@ -347,7 +364,7 @@ function preview(rel){
   pre.style.display = 'block';
   if (state.cache[rel] !== undefined) { pre.textContent = state.cache[rel]; return; }
   pre.textContent = 'Loading ' + rel + ' ...';
-  fetch('/api/file?path=' + encodeURIComponent(state.pkg) + '&rel=' + encodeURIComponent(rel))
+  api('/api/file?path=' + encodeURIComponent(state.pkg) + '&rel=' + encodeURIComponent(rel))
     .then(function(r){ return r.json(); })
     .then(function(d){
       var t = d.error ? ('[error] ' + d.error + '\n\nfile: ' + rel) : d.text;
@@ -380,7 +397,7 @@ function collectContent(){
 function prefetch(rels){
   var todo = rels.filter(function(r){ return state.cache[r] === undefined; });
   return Promise.all(todo.map(function(r){
-    return fetch('/api/file?path=' + encodeURIComponent(state.pkg) + '&rel=' + encodeURIComponent(r))
+    return api('/api/file?path=' + encodeURIComponent(state.pkg) + '&rel=' + encodeURIComponent(r))
       .then(function(x){ return x.json(); })
       .then(function(d){ state.cache[r] = d.error ? ('[error] ' + d.error) : d.text; });
   }));
@@ -405,7 +422,7 @@ function runAI(){
     var system = 'You are a senior Windows platform engineer analysing logs collected from a laptop under test. ' +
                  'Be concrete and cite file names and timestamps. Separate what the logs prove from what you suspect. ' +
                  'Answer in English, using short headings and bullet points.';
-    return fetch('/api/chat', {
+    return api('/api/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ endpoint: s.endpoint, apiKey: s.key, model: s.model, system: system, user: user })
@@ -450,6 +467,13 @@ function md(t){
   var html = out.join('\n');
   html = html.replace(/\u0000B(\d+)\u0000/g, function(m, i){ return blocks[+i]; });
   return html;
+}
+
+function stopServer(){
+  api('/api/shutdown').then(function(){
+    $('stopInfo').textContent = ' stopped - you can close this tab';
+    showOffline();
+  }).catch(function(){ $('stopInfo').textContent = ' server already stopped'; });
 }
 
 function copyAnswer(){ navigator.clipboard.writeText(state.answer || ''); }

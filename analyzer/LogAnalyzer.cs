@@ -8,15 +8,85 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading;
 using System.Web.Script.Serialization;
+using System.Windows.Forms;
+using System.Drawing;
 
 namespace LogAnalyzer
 {
+    internal class ServerForm : Form
+    {
+        public ServerForm(string url, string root)
+        {
+            Text = "Log Analyzer";
+            ClientSize = new Size(482, 214);
+            FormBorderStyle = FormBorderStyle.FixedSingle;
+            MaximizeBox = false;
+            StartPosition = FormStartPosition.CenterScreen;
+            Font = new Font("Segoe UI", 9F);
+            BackColor = Color.White;
+
+            Label title = new Label();
+            title.Text = "Log Analyzer is running";
+            title.Font = new Font("Segoe UI", 12F, FontStyle.Bold);
+            title.ForeColor = Color.FromArgb(31, 56, 100);
+            title.AutoSize = true;
+            title.Location = new Point(18, 14);
+            Controls.Add(title);
+
+            Label l1 = new Label();
+            l1.Text = "Address for your browser:";
+            l1.AutoSize = true;
+            l1.ForeColor = Color.Gray;
+            l1.Location = new Point(20, 50);
+            Controls.Add(l1);
+
+            TextBox box = new TextBox();
+            box.Text = url;
+            box.ReadOnly = true;
+            box.Location = new Point(20, 70);
+            box.Width = 440;
+            Controls.Add(box);
+
+            Label l2 = new Label();
+            l2.Text = "Packages: " + root;
+            l2.AutoSize = false;
+            l2.Size = new Size(440, 18);
+            l2.ForeColor = Color.Gray;
+            l2.Location = new Point(20, 102);
+            Controls.Add(l2);
+
+            Button open = new Button();
+            open.Text = "Open browser";
+            open.Location = new Point(20, 134);
+            open.Size = new Size(140, 34);
+            open.Click += delegate { try { Process.Start(url); } catch { } };
+            Controls.Add(open);
+
+            Button stop = new Button();
+            stop.Text = "Stop and exit";
+            stop.Location = new Point(172, 134);
+            stop.Size = new Size(140, 34);
+            stop.Click += delegate { Close(); };
+            Controls.Add(stop);
+
+            Label hint = new Label();
+            hint.Text = "Keep this window open while you use the page. Closing it stops the server.";
+            hint.AutoSize = true;
+            hint.ForeColor = Color.Gray;
+            hint.Location = new Point(20, 180);
+            Controls.Add(hint);
+
+            FormClosing += delegate { Program.LogLine("window closed, exiting"); };
+        }
+    }
+
     internal static class Program
     {
-        private const string Version = "1.1";
+        private const string Version = "1.2";
         private static string _root;
         private static int _port;
 
+        [STAThread]
         private static void Main(string[] args)
         {
             string root = args.Length > 0 && Directory.Exists(args[0])
@@ -33,18 +103,45 @@ namespace LogAnalyzer
             }
             if (_port == 0)
             {
-                Console.WriteLine("Could not bind a local port.");
+                MessageBox.Show("Could not bind a local port (8787-8826 are all in use).",
+                                "Log Analyzer", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
 
             string url = "http://127.0.0.1:" + _port + "/";
-            Console.WriteLine("Log Analyzer v" + Version);
-            Console.WriteLine("Package root: " + _root);
-            Console.WriteLine("Open: " + url);
+            LogLine("started v" + Version + " on " + url + "  root=" + _root);
             try { Process.Start(url); } catch { }
-            Console.WriteLine("Press Ctrl+C to stop.");
 
-            while (true) Thread.Sleep(1000);
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new ServerForm(url, _root));
+        }
+
+        private static void BeginShutdown()
+        {
+            LogLine("shutdown requested");
+            Thread t = new Thread(delegate()
+            {
+                Thread.Sleep(300);
+                Environment.Exit(0);
+            });
+            t.IsBackground = true;
+            t.Start();
+        }
+
+        private static readonly object _logLock = new object();
+        internal static void LogLine(string msg)
+        {
+            try
+            {
+                lock (_logLock)
+                {
+                    string f = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "analyzer.log");
+                    if (File.Exists(f) && new FileInfo(f).Length > 2 * 1024 * 1024) File.Delete(f);
+                    File.AppendAllText(f, DateTime.Now.ToString("HH:mm:ss") + "  " + msg + "\r\n", Encoding.UTF8);
+                }
+            }
+            catch { }
         }
 
         private static bool PortFree(int port)
@@ -68,10 +165,22 @@ namespace LogAnalyzer
             {
                 while (true)
                 {
-                    HttpListenerContext ctx;
-                    try { ctx = l.GetContext(); } catch { return; }
-                    try { Handle(ctx); }
-                    catch (Exception ex) { TryError(ctx, ex.Message); }
+                    HttpListenerContext ctx = null;
+                    try { ctx = l.GetContext(); }
+                    catch (Exception ex)
+                    {
+                        // 客户端中断、监听器抖动都不要让服务退出
+                        LogLine("accept error: " + ex.Message);
+                        if (!l.IsListening) return;
+                        Thread.Sleep(50);
+                        continue;
+                    }
+                    HttpListenerContext captured = ctx;
+                    ThreadPool.QueueUserWorkItem(delegate(object st)
+                    {
+                        try { Handle(captured); }
+                        catch (Exception ex) { TryError(captured, ex.Message); }
+                    });
                 }
             });
             t.IsBackground = true;
@@ -83,10 +192,12 @@ namespace LogAnalyzer
         private static void Handle(HttpListenerContext ctx)
         {
             string path = ctx.Request.Url.AbsolutePath.ToLowerInvariant();
+            if (path.StartsWith("/api/")) LogLine(ctx.Request.HttpMethod + " " + ctx.Request.RawUrl);
             if (!Local(ctx)) { ctx.Response.StatusCode = 403; ctx.Response.Close(); return; }
 
             if (path == "/" || path == "/index.html") { ServeFile(ctx, "analyzer.html", "text/html; charset=utf-8"); return; }
-            if (path == "/api/health") { Json(ctx, "{\"ok\":true,\"version\":\"" + Version + "\"}"); return; }
+            if (path == "/api/health" || path == "/api/ping") { Json(ctx, "{\"ok\":true,\"version\":\"" + Version + "\"}"); return; }
+            if (path == "/api/shutdown") { Json(ctx, "{\"ok\":true}"); BeginShutdown(); return; }
             if (path == "/api/packages") { Packages(ctx); return; }
             if (path == "/api/tree") { Tree(ctx); return; }
             if (path == "/api/file") { FileText(ctx); return; }

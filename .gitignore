@@ -14,3 +14,5 @@ output/
 __pycache__/
 *.pyc
 .dsh-office-*/
+analyzer/dist/
+analyzer/analyzer.log

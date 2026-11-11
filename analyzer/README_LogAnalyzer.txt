@@ -1,4 +1,4 @@
-Log Analyzer  v1.1
+Log Analyzer  v1.2
 ======================================================================
 
 1. What it is
@@ -6,25 +6,31 @@ Log Analyzer  v1.1
 A local web page for reading the packages produced by Laptop Log Collector
 and asking an AI model to analyse selected log files.
 
-It runs entirely on your machine: a tiny local server serves the page and
+It runs entirely on your machine: a small local server serves the page and
 reads the log files; only the text you select is sent to the AI endpoint
 you configure.
 
 2. How to run
 ----------------------------------------------------------------------
 Double-click LogAnalyzer.exe.
-It starts a local server on 127.0.0.1 and opens the page in your browser.
-Keep the console window open while you use the page; close it to stop.
+
+A small window appears ("Log Analyzer is running") and your browser opens
+the page automatically. Keep that window open while you work - closing it
+stops the server and the page stops working.
+
+The window has:
+  Open browser     open the page again in a new tab
+  Stop and exit    stops the server and closes the window
 
 Optional: pass a folder as the first argument to change where it looks
-for packages, for example
+for packages:
 
     LogAnalyzer.exe D:\test\packages
 
 3. Finding packages
 ----------------------------------------------------------------------
 By default it scans  Desktop\LogCollection  for sub-folders that contain
-report.html or Collection_Info.txt (that is what the collector produces).
+report.html or Collection_Info.txt (what the collector produces).
 
 Type any other folder in the box at the top right and press "Scan".
 
@@ -33,7 +39,7 @@ Type any other folder in the box at the top right and press "Scan".
 The left sidebar lists the package grouped by its 10_.., 20_.., 30_.. etc.
 folders. Click a group to expand it.
 
-  * text / html files  -> click the name to preview on the right
+  * text / html files  -> click the name, or tick the checkbox, to preview
   * .evtx / .dmp       -> shown greyed out, they are binary and are not
                           sent to the model
 
@@ -65,7 +71,20 @@ which keeps the request inside the model's context window.
 Nothing is uploaded to us; the selected text goes only to the endpoint
 you typed in.
 
-7. Limitations
+7. Troubleshooting "Failed to fetch"
+----------------------------------------------------------------------
+That message means the page cannot reach LogAnalyzer.exe.
+
+The usual cause is that the server window was closed (or the exe was
+killed). Start LogAnalyzer.exe again, then reload the page - a red bar at
+the top of the page also appears when the connection is lost.
+
+If the window is still open and it still fails:
+  * another program may have taken the port - the exe picks the next free
+    port (8787-8826) and the correct address is shown in its window;
+  * check analyzer.log next to the exe: every request is logged there.
+
+8. Limitations
 ----------------------------------------------------------------------
 * .evtx and .dmp cannot be read by the page - analyse them with Event
   Viewer and WinDbg. The collector already exports key_events.csv,

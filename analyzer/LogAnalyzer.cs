@@ -1,0 +1,412 @@
+using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Globalization;
+using System.IO;
+using System.Net;
+using System.Net.Sockets;
+using System.Text;
+using System.Threading;
+using System.Web.Script.Serialization;
+
+namespace LogAnalyzer
+{
+    internal static class Program
+    {
+        private const string Version = "1.0";
+        private static string _root;
+        private static int _port;
+
+        private static void Main(string[] args)
+        {
+            string root = args.Length > 0 && Directory.Exists(args[0])
+                ? args[0]
+                : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "LogCollection");
+            _root = root;
+
+            int start = 8787;
+            for (int i = 0; i < 40; i++)
+            {
+                int p = start + i;
+                if (!PortFree(p)) continue;
+                if (Start(p)) { _port = p; break; }
+            }
+            if (_port == 0)
+            {
+                Console.WriteLine("Could not bind a local port.");
+                return;
+            }
+
+            string url = "http://127.0.0.1:" + _port + "/";
+            Console.WriteLine("Log Analyzer v" + Version);
+            Console.WriteLine("Package root: " + _root);
+            Console.WriteLine("Open: " + url);
+            try { Process.Start(url); } catch { }
+            Console.WriteLine("Press Ctrl+C to stop.");
+
+            while (true) Thread.Sleep(1000);
+        }
+
+        private static bool PortFree(int port)
+        {
+            try
+            {
+                TcpListener l = new TcpListener(IPAddress.Loopback, port);
+                l.Start();
+                l.Stop();
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static bool Start(int port)
+        {
+            HttpListener l = new HttpListener();
+            l.Prefixes.Add("http://127.0.0.1:" + port + "/");
+            try { l.Start(); } catch { return false; }
+            Thread t = new Thread(delegate()
+            {
+                while (true)
+                {
+                    HttpListenerContext ctx;
+                    try { ctx = l.GetContext(); } catch { return; }
+                    try { Handle(ctx); }
+                    catch (Exception ex) { TryError(ctx, ex.Message); }
+                }
+            });
+            t.IsBackground = true;
+            t.Start();
+            return true;
+        }
+
+        // ------------------------------------------------------------------ routing
+        private static void Handle(HttpListenerContext ctx)
+        {
+            string path = ctx.Request.Url.AbsolutePath.ToLowerInvariant();
+            if (!Local(ctx)) { ctx.Response.StatusCode = 403; ctx.Response.Close(); return; }
+
+            if (path == "/" || path == "/index.html") { ServeFile(ctx, "analyzer.html", "text/html; charset=utf-8"); return; }
+            if (path == "/api/health") { Json(ctx, "{\"ok\":true,\"version\":\"" + Version + "\"}"); return; }
+            if (path == "/api/packages") { Packages(ctx); return; }
+            if (path == "/api/tree") { Tree(ctx); return; }
+            if (path == "/api/file") { FileText(ctx); return; }
+            if (path == "/api/chat") { Chat(ctx); return; }
+            ctx.Response.StatusCode = 404;
+            ctx.Response.Close();
+        }
+
+        /// <summary>只接受本机、且 Origin 为空或同源的请求，避免其它网页借用这个服务。</summary>
+        private static bool Local(HttpListenerContext ctx)
+        {
+            try
+            {
+                string origin = ctx.Request.Headers["Origin"];
+                if (!string.IsNullOrEmpty(origin) &&
+                    origin.IndexOf("127.0.0.1:" + _port, StringComparison.OrdinalIgnoreCase) < 0)
+                    return false;
+                return true;
+            }
+            catch { return false; }
+        }
+
+        private static void ServeFile(HttpListenerContext ctx, string name, string type)
+        {
+            string file = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, name);
+            if (!File.Exists(file)) { Send(ctx, 404, "text/plain", "analyzer.html not found next to the exe"); return; }
+            Send(ctx, 200, type, File.ReadAllText(file, Encoding.UTF8));
+        }
+
+        private static void Packages(HttpListenerContext ctx)
+        {
+            string root = ctx.Request.QueryString["root"];
+            if (string.IsNullOrEmpty(root)) root = _root;
+            if (!Directory.Exists(root)) { Json(ctx, "{\"root\":" + J(root) + ",\"packages\":[]}"); return; }
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append("{\"root\":").Append(J(root)).Append(",\"packages\":[");
+            bool first = true;
+            try
+            {
+                string[] dirs = Directory.GetDirectories(root);
+                Array.Sort(dirs, StringComparer.OrdinalIgnoreCase);
+                foreach (string d in dirs)
+                {
+                    if (!File.Exists(Path.Combine(d, "report.html")) &&
+                        !File.Exists(Path.Combine(d, "Collection_Info.txt"))) continue;
+                    if (!first) sb.Append(',');
+                    first = false;
+                    sb.Append("{\"name\":").Append(J(Path.GetFileName(d)))
+                      .Append(",\"path\":").Append(J(d))
+                      .Append(",\"time\":").Append(J(Directory.GetLastWriteTime(d).ToString("yyyy-MM-dd HH:mm")));
+                    sb.Append('}');
+                }
+            }
+            catch (Exception ex)
+            {
+                sb.Append("],\"error\":").Append(J(ex.Message)).Append('}');
+                Json(ctx, sb.ToString());
+                return;
+            }
+            sb.Append("]}");
+            Json(ctx, sb.ToString());
+        }
+
+        private static void Tree(HttpListenerContext ctx)
+        {
+            string pkg = ctx.Request.QueryString["path"];
+            if (string.IsNullOrEmpty(pkg) || !Directory.Exists(pkg)) { Json(ctx, "{\"files\":[],\"error\":\"package not found\"}"); return; }
+
+            StringBuilder sb = new StringBuilder();
+            sb.Append("{\"path\":").Append(J(pkg)).Append(",\"files\":[");
+            bool first = true;
+            int count = 0;
+            try
+            {
+                foreach (string f in Directory.GetFiles(pkg, "*", SearchOption.AllDirectories))
+                {
+                    if (count++ > 5000) break;
+                    string rel = f.Substring(pkg.Length).TrimStart('\\');
+                    if (rel.EndsWith("browse.html", StringComparison.OrdinalIgnoreCase)) continue;
+                    FileInfo fi = new FileInfo(f);
+                    string kind = TextKind(fi.Extension);
+                    if (!first) sb.Append(',');
+                    first = false;
+                    sb.Append("{\"rel\":").Append(J(rel))
+                      .Append(",\"name\":").Append(J(fi.Name))
+                      .Append(",\"size\":").Append(fi.Length)
+                      .Append(",\"kind\":").Append(J(kind)).Append('}');
+                }
+            }
+            catch (Exception ex) { sb.Append("],\"error\":").Append(J(ex.Message)).Append('}'); Json(ctx, sb.ToString()); return; }
+            sb.Append("]}");
+            Json(ctx, sb.ToString());
+        }
+
+        private static string TextKind(string ext)
+        {
+            ext = (ext ?? "").ToLowerInvariant();
+            switch (ext)
+            {
+                case ".txt": case ".csv": case ".log": case ".json": case ".md": case ".ini": case ".xml":
+                    return "text";
+                case ".html": case ".htm":
+                    return "html";
+                case ".evtx": case ".dmp": case ".etl": case ".zip": case ".png": case ".jpg":
+                    return "binary";
+                default:
+                    return "other";
+            }
+        }
+
+        private static void FileText(HttpListenerContext ctx)
+        {
+            string pkg = ctx.Request.QueryString["path"];
+            string rel = ctx.Request.QueryString["rel"];
+            if (string.IsNullOrEmpty(pkg) || string.IsNullOrEmpty(rel)) { Json(ctx, "{\"error\":\"missing parameters\"}"); return; }
+
+            string full = Path.GetFullPath(Path.Combine(pkg, rel));
+            if (!full.StartsWith(Path.GetFullPath(pkg), StringComparison.OrdinalIgnoreCase))
+            {
+                Json(ctx, "{\"error\":\"path outside package\"}");
+                return;
+            }
+            if (!File.Exists(full)) { Json(ctx, "{\"error\":\"file not found\"}"); return; }
+
+            const int Cap = 512 * 1024;
+            byte[] buf;
+            using (FileStream fs = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            {
+                int want = (int)Math.Min(fs.Length, Cap);
+                buf = new byte[want];
+                int read = 0, n;
+                while (read < want && (n = fs.Read(buf, read, want - read)) > 0) read += n;
+                if (read < want) Array.Resize(ref buf, read);
+            }
+            string text = Decode(buf);
+            StringBuilder sb = new StringBuilder();
+            sb.Append("{\"rel\":").Append(J(rel))
+              .Append(",\"truncated\":").Append(new FileInfo(full).Length > Cap ? "true" : "false")
+              .Append(",\"text\":").Append(J(text)).Append('}');
+            Json(ctx, sb.ToString());
+        }
+
+        // ------------------------------------------------------------------ ai proxy
+        private static void Chat(HttpListenerContext ctx)
+        {
+            string body;
+            using (StreamReader sr = new StreamReader(ctx.Request.InputStream, Encoding.UTF8)) body = sr.ReadToEnd();
+            JavaScriptSerializer js = new JavaScriptSerializer();
+            js.MaxJsonLength = 64 * 1024 * 1024;
+            Dictionary<string, object> req;
+            try { req = js.Deserialize<Dictionary<string, object>>(body); }
+            catch (Exception ex) { Json(ctx, "{\"error\":" + J("bad request: " + ex.Message) + "}"); return; }
+
+            string endpoint = Str(req, "endpoint", "https://api.deepseek.com/v1");
+            string apiKey = Str(req, "apiKey", "");
+            string model = Str(req, "model", "deepseek-chat");
+            string system = Str(req, "system", "");
+            string user = Str(req, "user", "");
+
+            if (apiKey.Length == 0) { Json(ctx, "{\"error\":\"API key is empty. Open Settings and paste your key.\"}"); return; }
+            if (user.Length == 0) { Json(ctx, "{\"error\":\"Nothing selected to analyse.\"}"); return; }
+
+            string url = endpoint.TrimEnd('/');
+            if (!url.EndsWith("/chat/completions", StringComparison.OrdinalIgnoreCase))
+                url += "/chat/completions";
+
+            var payload = new Dictionary<string, object>();
+            payload["model"] = model;
+            payload["temperature"] = 0.2;
+            List<object> msgs = new List<object>();
+            if (system.Length > 0) msgs.Add(new Dictionary<string, object> { { "role", "system" }, { "content", system } });
+            msgs.Add(new Dictionary<string, object> { { "role", "user" }, { "content", user } });
+            payload["messages"] = msgs;
+            payload["stream"] = false;
+            string json = js.Serialize(payload);
+
+            try
+            {
+                HttpWebRequest r = (HttpWebRequest)WebRequest.Create(url);
+                r.Method = "POST";
+                r.ContentType = "application/json";
+                r.Headers["Authorization"] = "Bearer " + apiKey;
+                r.Timeout = 300000;
+                r.ReadWriteTimeout = 300000;
+                byte[] data = Encoding.UTF8.GetBytes(json);
+                r.ContentLength = data.Length;
+                using (Stream s = r.GetRequestStream()) s.Write(data, 0, data.Length);
+                using (HttpWebResponse resp = (HttpWebResponse)r.GetResponse())
+                using (StreamReader sr = new StreamReader(resp.GetResponseStream(), Encoding.UTF8))
+                {
+                    string raw = sr.ReadToEnd();
+                    Json(ctx, ExtractAnswer(raw));
+                }
+            }
+            catch (WebException wex)
+            {
+                string detail = wex.Message;
+                try
+                {
+                    if (wex.Response != null)
+                        using (StreamReader sr = new StreamReader(wex.Response.GetResponseStream(), Encoding.UTF8))
+                            detail = sr.ReadToEnd();
+                }
+                catch { }
+                Json(ctx, "{\"error\":" + J("API call failed: " + detail) + "}");
+            }
+            catch (Exception ex)
+            {
+                Json(ctx, "{\"error\":" + J("API call failed: " + ex.Message) + "}");
+            }
+        }
+
+        private static string ExtractAnswer(string raw)
+        {
+            JavaScriptSerializer js = new JavaScriptSerializer();
+            js.MaxJsonLength = 64 * 1024 * 1024;
+            try
+            {
+                Dictionary<string, object> r = js.Deserialize<Dictionary<string, object>>(raw);
+                object choicesObj;
+                if (r.TryGetValue("choices", out choicesObj) && choicesObj is object[])
+                {
+                    object[] choices = (object[])choicesObj;
+                    if (choices.Length > 0 && choices[0] is Dictionary<string, object>)
+                    {
+                        Dictionary<string, object> c0 = (Dictionary<string, object>)choices[0];
+                        object msgObj;
+                        if (c0.TryGetValue("message", out msgObj) && msgObj is Dictionary<string, object>)
+                        {
+                            object content;
+                            if (((Dictionary<string, object>)msgObj).TryGetValue("content", out content))
+                                return "{\"content\":" + J(Convert.ToString(content)) + "}";
+                        }
+                    }
+                }
+                object err;
+                if (r.TryGetValue("error", out err)) return "{\"error\":" + J(Convert.ToString(err)) + "}";
+                return "{\"error\":" + J("Unexpected API response: " + Clip(raw, 400)) + "}";
+            }
+            catch
+            {
+                return "{\"error\":" + J("Unexpected API response: " + Clip(raw, 400)) + "}";
+            }
+        }
+
+        private static string Str(Dictionary<string, object> d, string key, string fallback)
+        {
+            object v;
+            if (d.TryGetValue(key, out v) && v != null) return Convert.ToString(v);
+            return fallback;
+        }
+
+        // ------------------------------------------------------------------ helpers
+        private static string Clip(string s, int n)
+        {
+            if (s == null) return "";
+            return s.Length <= n ? s : s.Substring(0, n) + "...";
+        }
+
+        private static string Decode(byte[] buf)
+        {
+            if (buf == null || buf.Length == 0) return "";
+            int len = buf.Length;
+            if (len >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) return Encoding.UTF8.GetString(buf, 3, len - 3);
+            if (len >= 2 && buf[0] == 0xFF && buf[1] == 0xFE) return Encoding.Unicode.GetString(buf, 2, len - 2);
+            if (len >= 2 && buf[0] == 0xFE && buf[1] == 0xFF) return Encoding.BigEndianUnicode.GetString(buf, 2, len - 2);
+            try { return new UTF8Encoding(false, true).GetString(buf); }
+            catch
+            {
+                try { return Encoding.GetEncoding(936).GetString(buf); }
+                catch { return Encoding.Default.GetString(buf); }
+            }
+        }
+
+        private static void Json(HttpListenerContext ctx, string json)
+        {
+            Send(ctx, 200, "application/json; charset=utf-8", json);
+        }
+
+        private static void Send(HttpListenerContext ctx, int code, string type, string body)
+        {
+            try
+            {
+                byte[] data = Encoding.UTF8.GetBytes(body);
+                ctx.Response.StatusCode = code;
+                ctx.Response.ContentType = type;
+                ctx.Response.ContentLength64 = data.Length;
+                ctx.Response.OutputStream.Write(data, 0, data.Length);
+            }
+            catch { }
+            finally { try { ctx.Response.Close(); } catch { } }
+        }
+
+        private static void TryError(HttpListenerContext ctx, string msg)
+        {
+            try { Json(ctx, "{\"error\":" + J(msg) + "}"); } catch { }
+        }
+
+        private static string J(string s)
+        {
+            if (s == null) return "null";
+            StringBuilder b = new StringBuilder("\"");
+            foreach (char c in s)
+            {
+                switch (c)
+                {
+                    case '"': b.Append("\\\""); break;
+                    case '\\': b.Append("\\\\"); break;
+                    case '\n': b.Append("\\n"); break;
+                    case '\r': b.Append("\\r"); break;
+                    case '\t': b.Append("\\t"); break;
+                    default:
+                        if (c < 32) b.Append("\\u").Append(((int)c).ToString("x4"));
+                        else b.Append(c);
+                        break;
+                }
+            }
+            b.Append('"');
+            return b.ToString();
+        }
+    }
+}

@@ -17,6 +17,7 @@ Every release gets its own branch; `main` always tracks the latest development s
 | Branch | Version | Notes |
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
+| `v1.8` | v1.8 | added Log Analyzer: local web UI to browse a package and have AI analyse selected logs |
 | `v1.7` | v1.7 | `C:\Windows\Panther`, `C:\Windows\Logs`, `C:\Windows\INF` mirrored with their folder structure |
 | `v1.6` | v1.6 | WER and LiveKernelReports mirrored with their folder structure; `powercfg /spr` sleep-study report; SOURCE.txt in every folder |
 | `v1.5` | v1.5 | new "All event log files (.evtx)" item: full mirror of `winevt\Logs` including empty folders (channel export fallback without admin); package folder named after the BIOS serial |
@@ -65,6 +66,8 @@ No Visual Studio required — the .NET Framework compiler shipped with Windows i
 
 Output goes to `build\LogCollector.exe`.
 
+The web UI lives in `analyzer/` and is built with `analyzer\build.ps1`.
+
 ## Command line
 
 ```
@@ -75,6 +78,17 @@ LogCollector.exe /cli /out:D:\logs /jobs:pdump /proc:chrome.exe
 
 Options: `/cli` headless, `/out` output folder, `/jobs` comma separated item ids, `/all` every item,
 `/tag` package name prefix, `/case` case id, `/symptom` symptom text, `/proc` target process.
+
+## Log Analyzer (web UI)
+
+`analyzer/` contains a second, independent tool: a local web page that reads a collected package
+and asks an AI model to analyse the logs you select.
+
+- Double-click `LogAnalyzer.exe`; it serves the page on `127.0.0.1` and opens the browser
+- Left panel: package tree with checkboxes; click a text file to preview it
+- "AI analysis": pick logs ("Core logs" or "Every text log"), pick a question, run
+- "Settings": OpenAI-compatible endpoint, API key, model (DeepSeek / OpenAI / Ollama)
+- Only the text you select is sent, and only to the endpoint you configure
 
 ## Notes
 

@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Log Analyzer</title>
+<style>
+*{box-sizing:border-box}
+body{margin:0;height:100vh;overflow:hidden;background:#f4f6fa;color:#1f2937;font:14px/1.55 'Segoe UI','Microsoft YaHei',system-ui,sans-serif}
+button{font:inherit;cursor:pointer}
+header{height:58px;display:flex;align-items:center;gap:12px;padding:0 18px;background:#1f3864;color:#fff}
+header h1{font-size:16px;margin:0;font-weight:700;letter-spacing:.02em}
+header .sub{font-size:12px;color:#b8c8e4}
+header .spacer{flex:1}
+header input{width:340px;padding:6px 10px;border-radius:6px;border:1px solid #4b6ba8;background:#2c4a7d;color:#fff;font-size:12px}
+header input::placeholder{color:#9fb3d6}
+header button{padding:6px 14px;border-radius:6px;border:0;background:#3f6cb8;color:#fff;font-size:12px}
+header button:hover{background:#4d7fce}
+main{display:flex;height:calc(100vh - 58px)}
+aside{width:330px;flex:0 0 330px;background:#fff;border-right:1px solid #e3e7ee;display:flex;flex-direction:column}
+aside .bar{padding:8px 12px;border-bottom:1px solid #eef1f6;font-size:12px;color:#6b7280;display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow:hidden}
+#pkgName{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;min-width:0}
+aside .bar button{white-space:nowrap}
+aside .bar b{color:#1f3864}
+aside .bar button{margin-left:auto;padding:3px 8px;border:1px solid #cbd5e1;background:#fff;border-radius:5px;font-size:11px;color:#475569}
+#tree{flex:1;overflow:auto;padding:6px 0}
+.grp{padding:6px 12px;font-size:12px;font-weight:700;color:#1f3864;background:#f7f9fc;border-top:1px solid #eef1f6;display:flex;gap:6px;align-items:center;cursor:pointer}
+.grp .cnt{font-weight:400;color:#9ca3af;margin-left:auto}
+.grp .caret{color:#9ca3af;font-size:10px;width:10px}
+.f{display:flex;gap:8px;align-items:center;padding:3px 12px 3px 26px;font-size:12px;cursor:pointer}
+.f:hover{background:#f5f8fe}
+.f input{margin:0}
+.f .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#334155}
+.f .sz{color:#9ca3af;font-size:11px;flex:0 0 auto}
+.f.bin .nm{color:#b0b7c3}
+.f.bin{cursor:default}
+section.right{flex:1;display:flex;flex-direction:column;min-width:0}
+.tabs{display:flex;gap:2px;padding:8px 14px 0;background:#fff;border-bottom:1px solid #e3e7ee}
+.tab{padding:7px 16px;border:0;background:transparent;color:#64748b;font-size:13px;border-bottom:2px solid transparent}
+.tab.on{color:#1f3864;font-weight:700;border-bottom-color:#2e5395}
+.pane{flex:1;overflow:auto;padding:16px 20px;display:none}
+.pane.on{display:block}
+pre.view{margin:0;background:#fff;border:1px solid #e3e7ee;border-radius:8px;padding:14px;font:12px/1.55 Consolas,'Courier New',monospace;white-space:pre;overflow:auto;max-height:calc(100vh - 190px)}
+.hint{color:#6b7280;background:#fff;border:1px solid #e3e7ee;border-radius:8px;padding:28px;text-align:center}
+.card{background:#fff;border:1px solid #e3e7ee;border-radius:8px;padding:14px 16px;margin-bottom:14px}
+.card h3{margin:0 0 10px;font-size:13px;color:#1f3864}
+.chips{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+.chip{padding:5px 12px;border:1px solid #c8d8ee;background:#fff;border-radius:14px;font-size:12px;color:#2e5395}
+.chip:hover{background:#eef3fb}
+textarea{width:100%;min-height:82px;padding:10px 12px;border:1px solid #d5dbe5;border-radius:8px;font:inherit;resize:vertical}
+.row{display:flex;gap:10px;align-items:center;margin-top:10px}
+.btn{padding:8px 20px;border:0;border-radius:8px;background:#2e5395;color:#fff;font-weight:600}
+.btn:hover{background:#3a63ad}
+.btn:disabled{background:#9fb0c9;cursor:default}
+.btn.ghost{background:#fff;border:1px solid #cbd5e1;color:#334155;font-weight:400}
+.meta{font-size:12px;color:#6b7280}
+#answer{background:#fff;border:1px solid #e3e7ee;border-radius:8px;padding:16px 20px;min-height:120px}
+#answer h1,#answer h2,#answer h3{margin:14px 0 6px;color:#1f3864;font-size:15px}
+#answer h1{font-size:17px}
+#answer p{margin:6px 0}
+#answer ul,#answer ol{margin:6px 0 6px 20px;padding:0}
+#answer code{background:#f1f5f9;padding:1px 5px;border-radius:3px;font-family:Consolas,monospace;font-size:12px}
+#answer pre{background:#f8fafc;border:1px solid #e2e8f0;border-radius:6px;padding:10px;overflow:auto;font:12px/1.5 Consolas,monospace}
+#answer strong{color:#111827}
+label.set{display:block;margin-bottom:12px}
+label.set span{display:block;font-size:12px;color:#475569;margin-bottom:4px}
+label.set input{width:100%;max-width:520px;padding:8px 10px;border:1px solid #d5dbe5;border-radius:6px}
+.spin{display:inline-block;width:12px;height:12px;border:2px solid #cfd8e6;border-top-color:#2e5395;border-radius:50%;animation:sp .8s linear infinite;margin-right:6px;vertical-align:-1px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.err{background:#fef2f2;border:1px solid #fecaca;color:#991b1b;border-radius:6px;padding:10px 12px;margin-bottom:10px;font-size:13px;white-space:pre-wrap}
+</style>
+</head>
+<body>
+<header>
+  <h1>Log Analyzer</h1>
+  <span class="sub">pick a collected package, select logs, ask AI</span>
+  <span class="spacer"></span>
+  <input id="root" placeholder="package root, e.g. C:\Users\me\Desktop\LogCollection">
+  <button onclick="scan()">Scan</button>
+</header>
+<main>
+  <aside>
+    <div class="bar"><button id="back" onclick="scan()" style="display:none;margin-left:0">&#9666; packages</button><b id="pkgName">no package</b><span id="selInfo"></span><button onclick="clearSel()" style="margin-left:auto">clear</button></div>
+    <div id="tree"><div class="hint" style="margin:14px">Press <b>Scan</b> to list packages.</div></div>
+  </aside>
+  <section class="right">
+    <div class="tabs">
+      <button class="tab on" data-pane="preview">Preview</button>
+      <button class="tab" data-pane="ai">AI analysis</button>
+      <button class="tab" data-pane="settings">Settings</button>
+    </div>
+
+    <div class="pane on" id="pane-preview">
+      <div class="hint" id="previewHint">Click a text file on the left to preview it.</div>
+      <pre class="view" id="preview" style="display:none"></pre>
+    </div>
+
+    <div class="pane" id="pane-ai">
+      <div class="card">
+        <h3>1. Which logs?</h3>
+        <div class="chips">
+          <button class="chip" onclick="selectCore()">Core logs (recommended)</button>
+          <button class="chip" onclick="selectAllText()">Every text log</button>
+          <button class="chip" onclick="clearSel()">Clear selection</button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>2. What do you want to know?</h3>
+        <div class="chips">
+          <button class="chip" onclick="preset(0)">Summarise key problems</button>
+          <button class="chip" onclick="preset(1)">Hardware or software?</button>
+          <button class="chip" onclick="preset(2)">Errors with timestamps</button>
+          <button class="chip" onclick="preset(3)">What else to collect?</button>
+        </div>
+        <textarea id="question" placeholder="Ask about the selected logs..."></textarea>
+        <div class="row">
+          <button class="btn" id="runBtn" onclick="runAI()">Analyze with AI</button>
+          <span class="meta" id="aiMeta"></span>
+        </div>
+      </div>
+      <div id="answer" style="display:none"></div>
+      <div class="row" id="answerTools" style="display:none">
+        <button class="btn ghost" onclick="copyAnswer()">Copy</button>
+        <button class="btn ghost" onclick="downloadAnswer()">Download .md</button>
+      </div>
+    </div>
+
+    <div class="pane" id="pane-settings">
+      <div class="card">
+        <h3>API</h3>
+        <label class="set"><span>Endpoint (OpenAI compatible)</span>
+          <input id="sEndpoint" placeholder="https://api.deepseek.com/v1"></label>
+        <label class="set"><span>API key</span>
+          <input id="sKey" type="password" placeholder="sk-..."></label>
+        <label class="set"><span>Model</span>
+          <input id="sModel" placeholder="deepseek-chat"></label>
+        <label class="set"><span>Characters per file (default 20000)</span>
+          <input id="sPer" type="number" value="20000"></label>
+        <label class="set"><span>Total characters sent (default 150000)</span>
+          <input id="sTotal" type="number" value="150000"></label>
+        <button class="btn" onclick="saveSettings()">Save settings</button>
+        <span class="meta" id="saveInfo"></span>
+        <p class="meta" style="margin-top:14px">The key is stored in this browser only and sent straight to the endpoint above. Nothing is uploaded anywhere else.</p>
+      </div>
+    </div>
+  </section>
+</main>
+
+<script>
+var state = { pkg:'', files:[], sel:{}, cache:{}, answer:'' };
+
+var PRESETS = [
+  'Summarise the key problems in these logs. Group them by area (boot, power, driver, disk, network, application) and state how confident you are for each.',
+  'Is this a hardware or a software problem? Explain the evidence you used and what would confirm it.',
+  'List the most important errors and warnings in chronological order, with timestamps and the file they came from.',
+  'Based on what is missing here, what else should be collected to confirm the root cause?'
+];
+
+function $(id){ return document.getElementById(id); }
+function esc(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function fmt(b){ if(b<1024) return b+' B'; if(b<1048576) return (b/1024).toFixed(1)+' KB'; return (b/1048576).toFixed(1)+' MB'; }
+
+document.querySelectorAll('.tab').forEach(function(t){
+  t.addEventListener('click', function(){
+    document.querySelectorAll('.tab').forEach(function(x){ x.classList.remove('on'); });
+    document.querySelectorAll('.pane').forEach(function(x){ x.classList.remove('on'); });
+    t.classList.add('on');
+    $('pane-' + t.dataset.pane).classList.add('on');
+  });
+});
+
+function loadSettings(){
+  var s = JSON.parse(localStorage.getItem('la.settings') || '{}');
+  $('sEndpoint').value = s.endpoint || 'https://api.deepseek.com/v1';
+  $('sKey').value = s.key || '';
+  $('sModel').value = s.model || 'deepseek-chat';
+  $('sPer').value = s.per || 20000;
+  $('sTotal').value = s.total || 150000;
+}
+function getSettings(){
+  return {
+    endpoint: $('sEndpoint').value.trim() || 'https://api.deepseek.com/v1',
+    key: $('sKey').value.trim(),
+    model: $('sModel').value.trim() || 'deepseek-chat',
+    per: parseInt($('sPer').value) || 20000,
+    total: parseInt($('sTotal').value) || 150000
+  };
+}
+function saveSettings(){
+  localStorage.setItem('la.settings', JSON.stringify(getSettings()));
+  $('saveInfo').textContent = ' saved ' + new Date().toLocaleTimeString();
+  refreshMeta();
+}
+
+function scan(){
+  var root = $('root').value.trim();
+  var url = '/api/packages' + (root ? '?root=' + encodeURIComponent(root) : '');
+  $('tree').innerHTML = '<div class="hint" style="margin:14px">Scanning...</div>';
+  fetch(url).then(function(r){ return r.json(); }).then(function(d){
+    $('root').value = d.root || root;
+    if(!d.packages || !d.packages.length){
+      $('tree').innerHTML = '<div class="hint" style="margin:14px">No package found under<br><b>' + esc(d.root||'') +
+        '</b><br><br>A package is a folder containing report.html or Collection_Info.txt.</div>';
+      return;
+    }
+    var h = '<div class="grp" style="cursor:default">Packages <span class="cnt">' + d.packages.length + '</span></div>';
+    d.packages.forEach(function(p, i){
+      h += '<div class="f" onclick="openPkg(' + i + ')" data-i="' + i + '"><span class="nm">' + esc(p.name) + '</span><span class="sz">' + esc(p.time) + '</span></div>';
+    });
+    $('tree').innerHTML = h;
+    state.packages = d.packages;
+    $('back').style.display = 'none';
+    if (d.packages.length === 1) openPkg(0);
+  }).catch(function(e){ $('tree').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+
+function openPkg(i){
+  var p = state.packages[i];
+  $('back').style.display = 'inline-block';
+  state.pkg = p.path; state.sel = {}; state.cache = {};
+  $('pkgName').textContent = p.name;
+  $('tree').innerHTML = '<div class="hint" style="margin:14px">Loading tree...</div>';
+  fetch('/api/tree?path=' + encodeURIComponent(p.path)).then(function(r){ return r.json(); }).then(function(d){
+    state.files = d.files || [];
+    renderTree();
+    if (/[?&]sel=core/.test(location.search)) selectCore();
+    else if (/[?&]sel=all/.test(location.search)) selectAllText();
+  }).catch(function(e){ $('tree').innerHTML = '<div class="err">' + esc(e.message) + '</div>'; });
+}
+
+function renderTree(){
+  var groups = {};
+  state.files.forEach(function(f){
+    var rel = f.rel.replace(/\\/g,'/');
+    var top = rel.indexOf('/') >= 0 ? rel.split('/')[0] : '(root)';
+    (groups[top] = groups[top] || []).push(f);
+  });
+  var h = '';
+  Object.keys(groups).sort().forEach(function(g){
+    var items = groups[g];
+    var sel = items.filter(function(f){ return state.sel[f.rel]; }).length;
+    h += '<div class="grp" onclick="toggleGroup(\'' + esc(g).replace(/'/g,"\\'") + '\', this)">' +
+         '<span class="caret">&#9656;</span><span>' + esc(g) + '</span>' +
+         '<span class="cnt">' + items.length + (sel?(' · '+sel+' selected'):'') + '</span></div>';
+    h += '<div class="body" data-g="' + esc(g) + '" style="display:none">';
+    items.forEach(function(f){
+      var isText = f.kind === 'text' || f.kind === 'html';
+      if (isText) {
+        h += '<label class="f"><input type="checkbox" ' + (state.sel[f.rel]?'checked':'') +
+             ' onchange="toggleSel(this)" data-rel="' + esc(f.rel) + '">' +
+             '<span class="nm" onclick="preview(event,\'' + esc(f.rel).replace(/'/g,"\\'") + '\')">' + esc(f.name) + '</span>' +
+             '<span class="sz">' + fmt(f.size) + '</span></label>';
+      } else {
+        h += '<div class="f bin" title="binary, not sent to AI"><span class="nm">' + esc(f.name) + '</span><span class="sz">' + fmt(f.size) + '</span></div>';
+      }
+    });
+    h += '</div>';
+  });
+  $('tree').innerHTML = h || '<div class="hint" style="margin:14px">No files.</div>';
+  refreshMeta();
+  var first = Object.keys(groups).sort()[0];
+  if (first) { var el = document.querySelector('.grp[onclick*="' + first.replace(/"/g,'\\"') + '"]'); }
+}
+
+function toggleGroup(name, el){
+  var body = el.nextElementSibling;
+  var open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  var c = el.querySelector('.caret');
+  if (c) c.innerHTML = open ? '&#9662;' : '&#9656;';
+}
+
+function toggleSel(cb){
+  if (cb.checked) state.sel[cb.dataset.rel] = true;
+  else delete state.sel[cb.dataset.rel];
+  refreshMeta();
+}
+
+function selectCore(){
+  var keys = ['Collection_Info.txt','key_events.csv','app_crash_events.csv','power_settings.txt',
+              'power_wake.txt','disk_health.txt','system_summary.txt','hardware_info.csv',
+              'problem_devices.txt','network_config.txt','wlan_history.html'];
+  state.files.forEach(function(f){
+    if (keys.indexOf(f.name) >= 0 && f.size < 3000000) state.sel[f.rel] = true;
+  });
+  renderTree();
+  showTab('ai');
+}
+
+function selectAllText(){
+  state.files.forEach(function(f){
+    if (f.kind === 'text' && f.size < 3000000) state.sel[f.rel] = true;
+  });
+  renderTree();
+  showTab('ai');
+}
+
+function showTab(name){
+  document.querySelectorAll('.tab').forEach(function(x){
+    x.classList.toggle('on', x.dataset.pane === name);
+  });
+  document.querySelectorAll('.pane').forEach(function(x){ x.classList.remove('on'); });
+  $('pane-' + name).classList.add('on');
+}
+
+function clearSel(){
+  state.sel = {};
+  renderTree();
+}
+
+function selectedRels(){
+  return Object.keys(state.sel).filter(function(k){ return state.sel[k]; });
+}
+
+function refreshMeta(){
+  var n = selectedRels().length;
+  var bytes = 0;
+  state.files.forEach(function(f){ if (state.sel[f.rel]) bytes += f.size; });
+  $('selInfo').textContent = n ? (n + ' selected') : '';
+  $('aiMeta').textContent = n ? (n + ' file(s), ' + fmt(bytes) + ' on disk') : 'no files selected';
+}
+
+function preview(ev, rel){
+  ev.stopPropagation();
+  if (ev.target.tagName === 'INPUT') return;
+  $('previewHint').style.display = 'none';
+  var pre = $('preview');
+  pre.style.display = 'block';
+  if (state.cache[rel]) { pre.textContent = state.cache[rel]; return; }
+  pre.textContent = 'Loading...';
+  fetch('/api/file?path=' + encodeURIComponent(state.pkg) + '&rel=' + encodeURIComponent(rel))
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var t = d.error ? ('[error] ' + d.error) : d.text;
+      state.cache[rel] = t;
+      pre.textContent = t;
+    }).catch(function(e){ pre.textContent = '[error] ' + e.message; });
+}
+
+function preset(i){ $('question').value = PRESETS[i]; }
+
+function collectContent(){
+  var s = getSettings();
+  var rels = selectedRels();
+  var total = 0, parts = [];
+  for (var i = 0; i < rels.length; i++){
+    var rel = rels[i];
+    var f = state.files.filter(function(x){ return x.rel === rel; })[0];
+    var text = state.cache[rel];
+    if (text === undefined) { continue; }
+    var body = text;
+    if (body.length > s.per) body = body.substring(0, s.per) + '\n...[truncated]';
+    var block = '=== FILE: ' + rel + ' (' + fmt(f ? f.size : body.length) + ') ===\n' + body + '\n';
+    if (total + block.length > s.total) { parts.push('...[total size limit reached, remaining files skipped]'); break; }
+    total += block.length;
+    parts.push(block);
+  }
+  return parts.join('\n');
+}
+
+function prefetch(rels){
+  var todo = rels.filter(function(r){ return state.cache[r] === undefined; });
+  return Promise.all(todo.map(function(r){
+    return fetch('/api/file?path=' + encodeURIComponent(state.pkg) + '&rel=' + encodeURIComponent(r))
+      .then(function(x){ return x.json(); })
+      .then(function(d){ state.cache[r] = d.error ? ('[error] ' + d.error) : d.text; });
+  }));
+}
+
+function runAI(){
+  var rels = selectedRels();
+  if (!rels.length) { alert('Select at least one log file first.'); return; }
+  var s = getSettings();
+  if (!s.key) { alert('Set your API key in the Settings tab first.'); return; }
+
+  var btn = $('runBtn');
+  btn.disabled = true; btn.innerHTML = '<span class="spin"></span>Analyzing...';
+  $('answer').style.display = 'block';
+  $('answer').innerHTML = '<div class="meta">Reading ' + rels.length + ' file(s) and calling the model...</div>';
+
+  prefetch(rels).then(function(){
+    var content = collectContent();
+    if (!content) { throw new Error('Selected files produced no text.'); }
+    var q = $('question').value.trim() || PRESETS[0];
+    var user = 'Analyse these Windows laptop logs and answer the question at the end.\n\n' + content + '\n\n---\nQuestion: ' + q;
+    var system = 'You are a senior Windows platform engineer analysing logs collected from a laptop under test. ' +
+                 'Be concrete and cite file names and timestamps. Separate what the logs prove from what you suspect. ' +
+                 'Answer in English, using short headings and bullet points.';
+    return fetch('/api/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ endpoint: s.endpoint, apiKey: s.key, model: s.model, system: system, user: user })
+    }).then(function(r){ return r.json(); });
+  }).then(function(d){
+    if (d.error) {
+      $('answer').innerHTML = '<div class="err">' + esc(d.error) + '</div>';
+    } else {
+      state.answer = d.content || '';
+      $('answer').innerHTML = md(state.answer);
+      $('answerTools').style.display = 'flex';
+    }
+  }).catch(function(e){
+    $('answer').innerHTML = '<div class="err">' + esc(e.message) + '</div>';
+  }).then(function(){
+    btn.disabled = false; btn.textContent = 'Analyze with AI';
+  });
+}
+
+function md(t){
+  var s = esc(t);
+  var blocks = [];
+  s = s.replace(/```([\s\S]*?)```/g, function(m, code){
+    blocks.push('<pre>' + code.replace(/^\n+|\n+$/g,'') + '</pre>');
+    return '\u0000B' + (blocks.length-1) + '\u0000';
+  });
+  s = s.replace(/^### (.*)$/gm, '<h3>$1</h3>')
+       .replace(/^## (.*)$/gm, '<h2>$1</h2>')
+       .replace(/^# (.*)$/gm, '<h1>$1</h1>')
+       .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+       .replace(/`([^`]+)`/g, '<code>$1</code>');
+  var lines = s.split('\n'), out = [], list = null;
+  lines.forEach(function(line){
+    var m = line.match(/^\s*[-*]\s+(.*)$/);
+    if (m) { if (!list) { out.push('<ul>'); list = true; } out.push('<li>' + m[1] + '</li>'); return; }
+    if (list) { out.push('</ul>'); list = null; }
+    if (/^\s*$/.test(line)) return;
+    if (/^<h[123]>/.test(line) || /^\u0000B\d+\u0000$/.test(line)) { out.push(line); return; }
+    out.push('<p>' + line + '</p>');
+  });
+  if (list) out.push('</ul>');
+  var html = out.join('\n');
+  html = html.replace(/\u0000B(\d+)\u0000/g, function(m, i){ return blocks[+i]; });
+  return html;
+}
+
+function copyAnswer(){ navigator.clipboard.writeText(state.answer || ''); }
+function downloadAnswer(){
+  var blob = new Blob([state.answer || ''], { type: 'text/markdown' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'ai-analysis.md';
+  a.click();
+}
+
+loadSettings();
+if (location.hash === '#ai') showTab('ai');
+scan();
+</script>
+</body>
+</html>

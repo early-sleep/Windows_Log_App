@@ -28,6 +28,10 @@ aside .bar button{margin-left:auto;padding:3px 8px;border:1px solid #cbd5e1;back
 #tree{flex:1;overflow:auto;padding:6px 0}
 .grp{padding:6px 12px;font-size:12px;font-weight:700;color:#1f3864;background:#f7f9fc;border-top:1px solid #eef1f6;display:flex;gap:6px;align-items:center;cursor:pointer}
 .grp .cnt{font-weight:400;color:#9ca3af;margin-left:auto}
+.grp .gname{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.grp .acts{display:flex;gap:4px;margin-left:4px}
+.mini{padding:1px 8px;border:1px solid #c8d8ee;background:#fff;border-radius:9px;font-size:10px;color:#2e5395;line-height:16px;cursor:pointer}
+.mini:hover{background:#eef3fb}
 .grp .caret{color:#9ca3af;font-size:10px;width:10px}
 .f{display:flex;gap:8px;align-items:center;padding:3px 12px 3px 26px;font-size:12px;cursor:pointer}
 .f:hover{background:#f5f8fe}
@@ -156,7 +160,7 @@ label.set input{width:100%;max-width:520px;padding:8px 10px;border:1px solid #d5
 </main>
 
 <script>
-var state = { pkg:'', files:[], sel:{}, cache:{}, answer:'' };
+var state = { pkg:'', files:[], sel:{}, cache:{}, answer:'', open:{}, groups:{} };
 
 var PRESETS = [
   'Summarise the key problems in these logs. Group them by area (boot, power, driver, disk, network, application) and state how confident you are for each.',
@@ -254,14 +258,21 @@ function renderTree(){
     var top = rel.indexOf('/') >= 0 ? rel.split('/')[0] : '(root)';
     (groups[top] = groups[top] || []).push(f);
   });
+  state.groups = groups;
   var h = '';
   Object.keys(groups).sort().forEach(function(g){
     var items = groups[g];
     var sel = items.filter(function(f){ return state.sel[f.rel]; }).length;
-    h += '<div class="grp" data-g="' + esc(g) + '"><span class="caret">&#9656;</span>' +
-         '<span>' + esc(g) + '</span><span class="cnt">' + items.length +
-         (sel ? (' · ' + sel + ' selected') : '') + '</span></div>';
-    h += '<div class="body" style="display:none">';
+    var opened = !!state.open[g];
+    h += '<div class="grp" data-g="' + esc(g) + '">' +
+         '<span class="caret">' + (opened ? '&#9662;' : '&#9656;') + '</span>' +
+         '<span class="gname">' + esc(g) + '</span>' +
+         '<span class="cnt">' + (sel ? (sel + '/' + items.length) : items.length) + '</span>' +
+         '<span class="acts">' +
+         '<button class="mini" data-act="all" data-g="' + esc(g) + '" title="select every file in this folder">all</button>' +
+         '<button class="mini" data-act="none" data-g="' + esc(g) + '" title="unselect this folder">none</button>' +
+         '</span></div>';
+    h += '<div class="body" style="display:' + (opened ? 'block' : 'none') + '">';
     items.forEach(function(f){
       var isText = (f.kind === 'text' || f.kind === 'html');
       if (isText) {
@@ -282,6 +293,12 @@ function renderTree(){
 }
 
 function onTreeClick(e){
+  var btn = e.target.closest ? e.target.closest('button.mini') : null;
+  if (btn) {
+    e.stopPropagation();
+    groupSelect(btn.getAttribute('data-g'), btn.getAttribute('data-act') === 'all');
+    return;
+  }
   var grp = e.target.closest ? e.target.closest('.grp') : null;
   if (grp) { toggleGroup(grp); return; }
   var row = e.target.closest ? e.target.closest('.f') : null;
@@ -302,8 +319,19 @@ function toggleGroup(el){
   if (!body) return;
   var open = body.style.display === 'none';
   body.style.display = open ? 'block' : 'none';
+  state.open[el.getAttribute('data-g')] = open;
   var c = el.querySelector('.caret');
   if (c) c.innerHTML = open ? '&#9662;' : '&#9656;';
+}
+
+function groupSelect(g, on){
+  var items = state.groups[g] || [];
+  items.forEach(function(f){
+    if (f.kind !== 'text' && f.kind !== 'html') return;
+    if (on) state.sel[f.rel] = true; else delete state.sel[f.rel];
+  });
+  state.open[g] = true;
+  renderTree();
 }
 
 function toggleSel(cb){
@@ -490,6 +518,7 @@ $('tree').addEventListener('click', onTreeClick);
 $('tree').addEventListener('change', onTreeChange);
 if (location.hash === '#ai') showTab('ai');
 scan();
+
 
 </script>
 </body>

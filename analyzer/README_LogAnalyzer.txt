@@ -1,4 +1,4 @@
-Log Analyzer  v1.2
+Log Analyzer  v1.3
 ======================================================================
 
 1. What it is
@@ -42,6 +42,11 @@ folders. Click a group to expand it.
   * text / html files  -> click the name, or tick the checkbox, to preview
   * .evtx / .dmp       -> shown greyed out, they are binary and are not
                           sent to the model
+
+Every group header has two buttons:
+  all    select every file in that folder (opens the folder)
+  none   unselect everything in that folder
+The counter on the right shows selected/total, e.g. 2/4.
 
 5. Asking AI
 ----------------------------------------------------------------------

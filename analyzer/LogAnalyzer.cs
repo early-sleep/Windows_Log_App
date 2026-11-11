@@ -82,7 +82,7 @@ namespace LogAnalyzer
 
     internal static class Program
     {
-        private const string Version = "1.2";
+        private const string Version = "1.3";
         private static string _root;
         private static int _port;
 

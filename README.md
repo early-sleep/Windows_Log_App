@@ -79,16 +79,14 @@ LogCollector.exe /cli /out:D:\logs /jobs:pdump /proc:chrome.exe
 Options: `/cli` headless, `/out` output folder, `/jobs` comma separated item ids, `/all` every item,
 `/tag` package name prefix, `/case` case id, `/symptom` symptom text, `/proc` target process.
 
-## Log Analyzer (web UI)
+## Log Analyzer
 
-`analyzer/` contains a second, independent tool: a local web page that reads a collected package
-and asks an AI model to analyse the logs you select.
+The log analyser moved to its own repository and is now a desktop app:
 
-- Double-click `LogAnalyzer.exe`; it serves the page on `127.0.0.1` and opens the browser
-- Left panel: package tree with checkboxes; click a text file to preview it
-- "AI analysis": pick logs ("Core logs" or "Every text log"), pick a question, run
-- "Settings": OpenAI-compatible endpoint, API key, model (DeepSeek / OpenAI / Ollama)
-- Only the text you select is sent, and only to the endpoint you configure
+**https://github.com/early-sleep/BSOD_analyse**
+
+It reads the packages produced here, lets you tick the logs you want and asks an
+OpenAI-compatible model to analyse them.
 
 ## Notes
 

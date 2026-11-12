@@ -18,6 +18,7 @@ Every release gets its own branch; `main` always tracks the latest development s
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
 | `v1.8` | v1.8 | added Log Analyzer: local web UI to browse a package and have AI analyse selected logs |
+| `v1.9` | v1.9 | System/Application logs exported to CSV with every event and full messages, plus an errors-only CSV and an optional all-channels conversion |
 | `v1.7` | v1.7 | `C:\Windows\Panther`, `C:\Windows\Logs`, `C:\Windows\INF` mirrored with their folder structure |
 | `v1.6` | v1.6 | WER and LiveKernelReports mirrored with their folder structure; `powercfg /spr` sleep-study report; SOURCE.txt in every folder |
 | `v1.5` | v1.5 | new "All event log files (.evtx)" item: full mirror of `winevt\Logs` including empty folders (channel export fallback without admin); package folder named after the BIOS serial |
@@ -52,6 +53,8 @@ Each run creates `<serial>_<timestamp>/` containing:
 - `Collection_Info.txt` — what was collected, status and how to read it
 - `SOURCE.txt` in every subfolder — source path, method and time for the files in it, so the package can be verified against the original logs
 - Raw logs: `System.evtx`, `Application.evtx`, `*.dmp`, CSV/TXT exports
+- `System_events.csv` / `Application_events.csv` - every event in the log with the full message text
+- `System_errors.csv` / `Application_errors.csv` - errors and warnings only, small enough to hand to an AI
 
 Text files are decoded as UTF-8, UTF-16 or GBK automatically, so Chinese output of system tools
 still renders correctly.

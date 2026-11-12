@@ -20,6 +20,7 @@ namespace LogCollector
             list.Add(new JobDef { Id = "events-system", Category = "Basics", Name = "System event log + key event analysis", Hint = "BSOD, unexpected shutdown, driver and hardware errors (~10 s)", DefaultOn = true, Run = Jobs.SystemEvents });
             list.Add(new JobDef { Id = "events-app", Category = "Basics", Name = "Application event log", Hint = "App crashes and hangs (~10 s)", DefaultOn = true, Run = Jobs.AppEvents });
             list.Add(new JobDef { Id = "evtx-all", Category = "Basics", Name = "All event log files (.evtx)", Hint = "Mirrors winevt\\Logs incl. empty folders (~30 s as admin); ~2 min without", DefaultOn = true, Run = Jobs.AllEventLogs });
+            list.Add(new JobDef { Id = "evtxcsv", Category = "Basics", Name = "Event logs as CSV (every channel)", Hint = "Converts every collected .evtx to CSV; up to 20 min, skips logs over 26 MB", DefaultOn = false, Run = Jobs.EventCsvAll });
             list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info and hardware details", Hint = "Model, BIOS, CPU, memory, battery, problem devices (~15 s)", DefaultOn = true, Run = Jobs.SysInfo });
             list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Drivers and devices", Hint = "Driver versions, signing, problem devices (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
             list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Processes, services and startup", Hint = "Current runtime state (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
@@ -88,6 +89,58 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             string outp = Tool.Ps(script, 180000, s.Token);
             File.WriteAllText(Path.Combine(dir, "key_events.csv"), outp, new UTF8Encoding(true));
             ParseEvents(outp, "System", s);
+
+            ExportLogCsv(s, "System", dir, "System_events.csv", 30, null);
+            ExportLogCsv(s, "System", dir, "System_errors.csv", 30, "1,2,3");
+        }
+
+        /// <summary>把某个日志通道的全部事件导出成 CSV（完整消息，不截断）。</summary>
+        private static void ExportLogCsv(Session s, string logName, string dir, string fileName, int days, string levels)
+        {
+            string target = Path.Combine(dir, fileName);
+            string outPs = target.Replace("'", "''");
+            string levelPart = string.IsNullOrEmpty(levels) ? "" : ("; Level=" + levels);
+            string script = @"
+$out = '" + outPs + @"'
+$start = (Get-Date).AddDays(-" + days + @")
+$ev = $null
+try { $ev = Get-WinEvent -FilterHashtable @{LogName='" + logName + @"'; StartTime=$start" + levelPart + @"} -ErrorAction SilentlyContinue } catch { }
+if($ev){
+  $ev | Sort-Object TimeCreated |
+    Select-Object @{n='TimeCreated';e={$_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')}},
+                  @{n='LogName';e={$_.LogName}},
+                  @{n='EventID';e={$_.Id}},
+                  @{n='Level';e={$_.LevelDisplayName}},
+                  @{n='Provider';e={$_.ProviderName}},
+                  @{n='Task';e={$_.TaskDisplayName}},
+                  @{n='RecordId';e={$_.RecordId}},
+                  @{n='User';e={$_.UserId}},
+                  @{n='Computer';e={$_.MachineName}},
+                  @{n='Data';e={ (@($_.Properties) | ForEach-Object { $_.Value }) -join ' | ' }},
+                  @{n='Message';e={ ([string]$_.Message) -replace ""[`r`n]+"",' ' }} |
+    Export-Csv -Path $out -NoTypeInformation -Encoding UTF8
+  Write-Output ('rows=' + @($ev).Count)
+} else {
+  Write-Output 'rows=0'
+}
+";
+            string outp = Tool.Ps(script, 600000, s.Token);
+            string rows = "";
+            foreach (string line in (outp ?? "").Split('\n'))
+            {
+                string l = line.Trim();
+                if (l.StartsWith("rows=")) rows = l.Substring(5);
+            }
+            if (File.Exists(target))
+            {
+                long size = new FileInfo(target).Length;
+                s.Log("  · " + fileName + ": " + rows + " event(s), " + Tool.FmtSize(size));
+                if (size < 100) File.Delete(target);
+            }
+            else
+            {
+                s.Log("  · " + fileName + ": no events in the last " + days + " days");
+            }
         }
 
         /// <summary>把 winevt\Logs 下所有 .evtx 连目录结构（含空目录）整体镜像出来。</summary>
@@ -274,6 +327,9 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             string outp = Tool.Ps(script, 180000, s.Token);
             File.WriteAllText(Path.Combine(dir, "app_crash_events.csv"), outp, new UTF8Encoding(true));
             ParseEvents(outp, "Application", s);
+
+            ExportLogCsv(s, "Application", dir, "Application_events.csv", 30, null);
+            ExportLogCsv(s, "Application", dir, "Application_errors.csv", 30, "1,2,3");
         }
 
         public static void SysInfo(Session s)
@@ -789,6 +845,72 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 throw new SkippedException("No live kernel report could be copied (empty, or administrator rights required)");
             s.Log("  · " + files + " file(s) in " + dirs + " folder(s), " + Tool.FmtSize(bytes)
                   + (failed > 0 ? ", " + failed + " failed" : ""));
+        }
+
+        /// <summary>把 12_All_Event_Logs 下已经采到的每个 .evtx 转成同名 .csv（完整内容）。</summary>
+        public static void EventCsvAll(Session s)
+        {
+            string dir = s.Dir("12_All_Event_Logs");
+            string src = Path.Combine(dir, "Logs");
+            if (!Directory.Exists(src)) src = Path.Combine(dir, "Channels");
+            if (!Directory.Exists(src)) throw new SkippedException("No .evtx found - run 'All event log files (.evtx)' first");
+
+            string csvRoot = Path.Combine(dir, "Csv");
+            Directory.CreateDirectory(csvRoot);
+            s.Source(csvRoot, src, "every .evtx converted to CSV with Get-WinEvent -Path");
+
+            string outPs = csvRoot.Replace("'", "''");
+            string srcPs = src.Replace("'", "''");
+            string script = @"
+$src = '" + srcPs + @"'
+$dst = '" + outPs + @"'
+$files = @(Get-ChildItem -LiteralPath $src -Filter *.evtx -Recurse -ErrorAction SilentlyContinue | Sort-Object Length)
+Write-Output ('files=' + $files.Count)
+$deadline = (Get-Date).AddMinutes(20)
+$i = 0
+$skipped = 0
+foreach ($f in $files) {
+  if ((Get-Date) -gt $deadline) { Write-Output 'timeout=1'; break }
+  if ($f.Length -gt 26MB) { $skipped++; continue }
+  $rel = $f.FullName.Substring($src.Length).TrimStart('\')
+  $out = Join-Path $dst ($rel + '.csv')
+  $parent = Split-Path $out -Parent
+  if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
+  try {
+    $ev = Get-WinEvent -Path $f.FullName -Oldest -ErrorAction Stop
+    $ev | Select-Object @{n='TimeCreated';e={$_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')}},
+                        @{n='EventID';e={$_.Id}},
+                        @{n='Level';e={$_.LevelDisplayName}},
+                        @{n='Provider';e={$_.ProviderName}},
+                        @{n='User';e={$_.UserId}},
+                        @{n='Data';e={ (@($_.Properties) | ForEach-Object { $_.Value }) -join ' | ' }},
+                        @{n='Message';e={ ([string]$_.Message) -replace ""[`r`n]+"",' ' }} |
+      Export-Csv -Path $out -NoTypeInformation -Encoding UTF8
+  } catch { }
+  $i++
+  if (($i % 100) -eq 0) { Write-Output ('progress=' + $i) }
+}
+Write-Output ('done=' + $i)
+Write-Output ('skipped=' + $skipped)
+Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Length -lt 50 } | Remove-Item -Force -ErrorAction SilentlyContinue
+";
+            string outp = Tool.Ps(script, 1500000, s.Token);
+            int done = 0, total = 0, skipped = 0;
+            bool timeout = false;
+            foreach (string line in (outp ?? "").Split('\n'))
+            {
+                string l = line.Trim();
+                if (l.StartsWith("files=")) int.TryParse(l.Substring(6), out total);
+                if (l.StartsWith("done=")) int.TryParse(l.Substring(5), out done);
+                if (l.StartsWith("skipped=")) int.TryParse(l.Substring(8), out skipped);
+                if (l.StartsWith("timeout=")) timeout = true;
+            }
+            long bytes = 0;
+            try { bytes = Tool.DirSize(csvRoot); } catch { }
+            if (done == 0) throw new SkippedException("No event could be converted to CSV");
+            s.Log("  · " + done + "/" + total + " evtx -> csv, " + Tool.FmtSize(bytes)
+                  + (skipped > 0 ? ", " + skipped + " larger than 26 MB skipped" : "")
+                  + (timeout ? ", stopped at the 20 minute budget" : ""));
         }
 
         /// <summary>通用整目录镜像任务。</summary>

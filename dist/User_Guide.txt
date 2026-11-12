@@ -1,4 +1,4 @@
-Laptop Log Collector  v1.8
+Laptop Log Collector  v1.9
 ======================================================================
 
 1. What this is
@@ -75,6 +75,9 @@ and energy items.
 [Storage]
   Disk and SMART health                  health, temperature, power-on hours, wear
 
+  Event logs as CSV (every channel)    converts each collected .evtx to CSV;
+                                       up to 20 min, skips logs over 26 MB
+
 [Setup and component logs]
   Windows setup logs (Panther)           mirrors C:\Windows\Panther: setupact.log,
                                          setupapi, migration and rollback data
@@ -102,8 +105,12 @@ The folder contains:
                          hardware, battery and power settings
   All_Content.html       every text file in one browsable page
   Collection_Info.txt    what was collected, status and how to read it
-  10_System_Logs\        System.evtx + key_events.csv
-  11_Application_Logs\   Application.evtx + app_crash_events.csv
+  10_System_Logs\        System.evtx
+                         System_events.csv      every event, full messages (30 days)
+                         System_errors.csv      errors + warnings only (small, AI friendly)
+                         key_events.csv         the short list used by report.html
+  11_Application_Logs\   Application.evtx + Application_events.csv
+                         + Application_errors.csv + app_crash_events.csv
   12_All_Event_Logs\     all .evtx files: Logs\ is an exact mirror of winevt\Logs
                          (empty folders included) when run as administrator;
                          otherwise Channels\ holds one .evtx per exported channel

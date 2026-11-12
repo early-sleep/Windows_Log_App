@@ -17,6 +17,7 @@ namespace LogCollector
             d["events-system"] = "10_System_Logs";
             d["events-app"] = "11_Application_Logs";
             d["evtx-all"] = "12_All_Event_Logs";
+            d["evtxcsv"] = "12_All_Event_Logs";
             d["sysinfo"] = "20_System_Info";
             d["drivers"] = "21_Drivers_Devices";
             d["snapshot"] = "22_Runtime_Snapshot";
@@ -206,7 +207,7 @@ namespace LogCollector
 
     static class Program
     {
-        public const string Version = "1.8";
+        public const string Version = "1.9";
 
         [STAThread]
         static int Main(string[] args)

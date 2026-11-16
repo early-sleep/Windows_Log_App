@@ -327,7 +327,8 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             s.Source(dir, @"WMI/CIM + systeminfo + powercfg report parsers", "queried from the running system");
             string o;
             string sys = Path.Combine(dir, "systeminfo.txt");
-            Tool.Run("cmd.exe", "/c systeminfo > " + Tool.Q(sys), 60000, s.Token, out o, Encoding.Default);
+            Tool.RunAuto("cmd.exe", "/c systeminfo > " + Tool.Q(sys), 60000, s.Token, out o);
+            Tool.NormalizeTextFile(sys);
 
             string probe = @"$result = New-Object System.Collections.ArrayList
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
@@ -399,6 +400,7 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
             string o;
             Tool.Run("msinfo32.exe", "/report " + Tool.Q(f), 45000, s.Token, out o, Encoding.Default);
             WaitFile(f, 40000, s.Token);
+            Tool.NormalizeTextFile(f);
             if (!File.Exists(f))
                 throw new Exception("msinfo32 did not produce a file in time (it hangs on some machines); use another item instead");
         }
@@ -408,8 +410,9 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
             string dir = s.Dir("5_Drivers_Devices");
             s.Source(dir, @"pnputil /enum-drivers   +   Win32_PnPEntity problem devices", "queried from the running system");
             string o;
-            Tool.Run("cmd.exe", "/c pnputil /enum-drivers > " + Tool.Q(Path.Combine(dir, "driver_store.txt")),
-                     120000, s.Token, out o, Encoding.Default);
+            Tool.RunAuto("cmd.exe", "/c pnputil /enum-drivers > " + Tool.Q(Path.Combine(dir, "driver_store.txt")),
+                     120000, s.Token, out o);
+            Tool.NormalizeTextFile(Path.Combine(dir, "driver_store.txt"));
 
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
@@ -901,7 +904,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
                 if (s.Token.IsCancellationRequested) return;
                 string key = item[0], name = item[1], sub = item[2], setting = item[3], kind = item[4];
                 string outp;
-                Tool.Run("powercfg.exe", "/qh SCHEME_CURRENT " + sub + " " + setting, 30000, s.Token, out outp, Encoding.Default);
+                Tool.RunAuto("powercfg.exe", "/qh SCHEME_CURRENT " + sub + " " + setting, 30000, s.Token, out outp);
                 long ac, dc;
                 if (!ParseIndices(outp, out ac, out dc)) continue;
 
@@ -1042,7 +1045,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
             {
                 if (s.Token.IsCancellationRequested) return;
                 string outp;
-                Tool.Run("cmd.exe", "/c " + c[1], 60000, s.Token, out outp, Encoding.Default);
+                Tool.RunAuto("cmd.exe", "/c " + c[1], 60000, s.Token, out outp);
                 sb.AppendLine("=== " + c[0] + " ===");
                 sb.AppendLine(outp);
                 sb.AppendLine();

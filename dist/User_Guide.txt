@@ -1,4 +1,4 @@
-Laptop Log Collector  v2.2
+Laptop Log Collector  v2.3
 ======================================================================
 
 1. What this is
@@ -124,6 +124,11 @@ The folder contains:
  18_Sleep_Study\ 19_DXDiag\ 20_Network\ 21_Storage\
 
 Only the folders for the items you ticked are created.
+
+All .txt files in the package are UTF-8 with BOM, so Chinese text from
+system tools (ipconfig, systeminfo, netsh, pnputil) displays correctly in
+Notepad, VS Code and Excel. Tools that print UTF-8 and tools that print GBK
+are both decoded correctly.
 
 Folders whose copy was incomplete contain Skipped_Files.txt listing what was
 left out (for example files that were locked or did not fit the free space).

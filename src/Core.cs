@@ -213,6 +213,114 @@ namespace LogCollector
             return total;
         }
 
+        /// <summary>
+        /// 自动识别编码地跑一个命令：先按原始字节读回来，再判断是 UTF-8 还是 GBK。
+        /// 同一份文件里 ipconfig 是 GBK、netsh 是 UTF-8，不能只用一种编码解。
+        /// </summary>
+        public static int RunAuto(string exe, string args, int timeoutMs, CancellationToken token, out string output)
+        {
+            output = "";
+            try
+            {
+                ProcessStartInfo psi = new ProcessStartInfo(exe, args);
+                psi.UseShellExecute = false;
+                psi.CreateNoWindow = true;
+                psi.RedirectStandardOutput = true;
+                psi.RedirectStandardError = true;
+
+                using (Process p = new Process())
+                {
+                    p.StartInfo = psi;
+                    p.Start();
+
+                    object gate = new object();
+                    System.IO.MemoryStream ms = new System.IO.MemoryStream();
+                    Thread t1 = new Thread(delegate()
+                    {
+                        byte[] buf = new byte[8192];
+                        try
+                        {
+                            int n;
+                            while ((n = p.StandardOutput.BaseStream.Read(buf, 0, buf.Length)) > 0)
+                                lock (gate) ms.Write(buf, 0, n);
+                        }
+                        catch { }
+                    });
+                    Thread t2 = new Thread(delegate()
+                    {
+                        byte[] buf = new byte[8192];
+                        try
+                        {
+                            int n;
+                            while ((n = p.StandardError.BaseStream.Read(buf, 0, buf.Length)) > 0)
+                                lock (gate) ms.Write(buf, 0, n);
+                        }
+                        catch { }
+                    });
+                    t1.IsBackground = true;
+                    t2.IsBackground = true;
+                    t1.Start();
+                    t2.Start();
+
+                    int waited = 0;
+                    while (!p.WaitForExit(200))
+                    {
+                        waited += 200;
+                        if (token.IsCancellationRequested) { try { p.Kill(); } catch { } return -1; }
+                        if (timeoutMs > 0 && waited > timeoutMs) { try { p.Kill(); } catch { } return -2; }
+                    }
+                    p.WaitForExit();
+                    try { t1.Join(3000); } catch { }
+                    try { t2.Join(3000); } catch { }
+
+                    byte[] data;
+                    lock (gate) data = ms.ToArray();
+                    output = DecodeText(data);
+                    return p.ExitCode;
+                }
+            }
+            catch (Exception ex)
+            {
+                output = ex.Message;
+                return -3;
+            }
+        }
+
+        /// <summary>把工具直接写到磁盘的文本文件（GBK/UTF-16）统一成 UTF-8，避免同一个包里混编码。</summary>
+        public static void NormalizeTextFile(string path)
+        {
+            try
+            {
+                if (!File.Exists(path)) return;
+                FileInfo fi = new FileInfo(path);
+                if (fi.Length == 0 || fi.Length > 20L * 1024 * 1024) return;
+                byte[] data = File.ReadAllBytes(path);
+                if (data.Length >= 3 && data[0] == 0xEF && data[1] == 0xBB && data[2] == 0xBF) return;
+                string text = DecodeText(data);
+                File.WriteAllText(path, text, new UTF8Encoding(true));
+            }
+            catch { }
+        }
+
+        /// <summary>先试严格 UTF-8，失败再按 GBK 解；控制台工具两种编码都有。</summary>
+        public static string DecodeText(byte[] buf)
+        {
+            if (buf == null || buf.Length == 0) return "";
+            int len = buf.Length;
+            if (len >= 3 && buf[0] == 0xEF && buf[1] == 0xBB && buf[2] == 0xBF) return Encoding.UTF8.GetString(buf, 3, len - 3);
+            if (len >= 2 && buf[0] == 0xFF && buf[1] == 0xFE) return Encoding.Unicode.GetString(buf, 2, len - 2);
+            if (len >= 2 && buf[0] == 0xFE && buf[1] == 0xFF) return Encoding.BigEndianUnicode.GetString(buf, 2, len - 2);
+            try { return new UTF8Encoding(false, true).GetString(buf); }
+            catch
+            {
+                try
+                {
+                    return Encoding.GetEncoding(936).GetString(buf);
+                }
+                catch { return Encoding.Default.GetString(buf); }
+            }
+        }
+
         public static int Run(string exe, string args, int timeoutMs, CancellationToken token,
                               out string output, Encoding enc)
         {

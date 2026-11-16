@@ -1,4 +1,4 @@
-Laptop Log Collector  v2.0
+Laptop Log Collector  v2.1
 ======================================================================
 
 1. What this is
@@ -15,34 +15,32 @@ The interface and all generated reports are in English.
 ----------------------------------------------------------------------
 - Windows 10 / Windows 11 (64-bit), any display language
 - Portable: a single exe, no .NET / Python / runtime required
-- Run as administrator recommended (otherwise dumps, WER, energy report
-  and sleep study are skipped)
+- Run as administrator recommended (otherwise dumps, WER and the sleep study
+  report are skipped)
 
 3. Three steps
 ----------------------------------------------------------------------
 1) Double-click LogCollector.exe
-2) Tick what to collect (the common set is already ticked)
-3) Optionally change the output folder: type a path, or press "Browse..."
+2) Type the name of the collector in "Collected by" at the top
+3) Tick what to collect (the common set is already ticked)
+4) Optionally change the output folder: type a path, or press "Browse..."
    to pick one (the default is Desktop\LogCollection)
-4) Click "Start collection" and wait for the progress bar
+5) Click "Start collection" and wait for the progress bar
 
 An "Open the HTML report now?" prompt appears when done.
 
-Avoid using the machine while collecting, especially for the performance
-and energy items.
+Avoid using the machine while collecting.
 
 4. What each item collects
 ----------------------------------------------------------------------
 The number in front of each item is the output folder number: item 4 writes
-to 4_System_Info, item 17 to 17_Battery, and so on.
+to 4_System_Info, item 16 to 16_Battery, and so on.
 
 [Basics]
   1  System event log                  System.evtx plus the full event list as CSV
   2  Application event log             Application.evtx plus the full event list as CSV
   3  All event log files (.evtx)       every .evtx under winevt\Logs, folder
                                        structure mirrored incl. empty folders
-  3b Event logs as CSV                 converts each collected .evtx to CSV;
-                                       up to 20 min, skips logs over 26 MB
   4  System info (systeminfo)          full systeminfo report
   5  Driver store and problem devices  driver store listing + devices with a
                                        yellow mark in Device Manager
@@ -57,36 +55,30 @@ to 4_System_Info, item 17 to 17_Battery, and so on.
  11  Live kernel reports               mirrors C:\Windows\LiveKernelReports
                                        (GPU hangs/timeouts without a BSOD); needs admin
  12  Full memory dump (MEMORY.DMP)     only if the system already created it
- 13  Process memory dump (GB)          full dump of a running process
 
 [Setup and component logs]
- 14  Windows setup logs (Panther)      mirrors C:\Windows\Panther: setupact.log,
+ 13  Windows setup logs (Panther)      mirrors C:\Windows\Panther: setupact.log,
                                        setupapi, migration and rollback data
                                        (can be ~2 GB; needs admin)
- 15  Windows component logs            mirrors C:\Windows\Logs: CBS, DISM,
+ 14  Windows component logs            mirrors C:\Windows\Logs: CBS, DISM,
                                        WindowsUpdate, WinRE, MoSetup
- 16  Driver INF and setup logs         mirrors C:\Windows\INF incl. setupapi.dev.log
+ 15  Driver INF and setup logs         mirrors C:\Windows\INF incl. setupapi.dev.log
 
 [Power and battery]
- 17  Battery health report             design/full capacity, cycles, drain curve
- 18  Power settings                    sleep/hibernate/display/disk timeouts,
+ 16  Battery health report             design/full capacity, cycles, drain curve
+ 17  Power settings                    sleep/hibernate/display/disk timeouts,
                                        lid and power button action, hybrid sleep
- 19  Energy report (60 s audit)        needs admin
- 20  Sleep study + system power report powercfg /sleepstudy and powercfg /spr
+ 18  Sleep study + system power report powercfg /sleepstudy and powercfg /spr
                                        (sleepstudy-report.html); needs admin
 
 [Performance]
- 21  Performance sampling (30 s)       CPU, free memory, disk busy, MHz, battery
- 22  DXDiag (graphics and display)     dxdiag report: GPU driver, display modes
+ 19  DXDiag (graphics and display)     dxdiag report: GPU driver, display modes
 
 [Network]
- 23  Network configuration snapshot    IP, routes, DNS, Wi-Fi, proxy, TCP
+ 20  Network configuration snapshot    IP, routes, DNS, Wi-Fi, proxy, TCP
 
 [Storage]
- 24  Disk and SMART health             health, temperature, power-on hours, wear
-
-[Other]
- 25  Extra log folder                  logs of the application under test
+ 21  Disk and SMART health             health, temperature, power-on hours, wear
 
 5. Output
 ----------------------------------------------------------------------
@@ -103,6 +95,7 @@ The folder contains:
                          hardware, battery and power settings
   All_Content.html       every text file in one browsable page
   Collection_Info.txt    what was collected, status and how to read it
+  Collected_By.txt       who collected this package and when
 
   1_System_Logs\         System.evtx
                          System_events.csv    every event, full messages (30 days)
@@ -122,14 +115,12 @@ The folder contains:
  10_WER_Reports\         WER\ mirrors C:\ProgramData\Microsoft\Windows\WER
  11_LiveKernel_Reports\  mirrors C:\Windows\LiveKernelReports
  12_Memory_Dump\         MEMORY.DMP
- 13_Process_Dump\        process memory dump
- 14_Setup_Panther\       Panther\ mirrors C:\Windows\Panther
- 15_Windows_Logs\        Logs\ mirrors C:\Windows\Logs
- 16_Inf_Drivers\         INF\ mirrors C:\Windows\INF
- 17_Battery\             battery_report.html
- 18_Power_Settings\      power_settings.txt
- 19_Energy_Report\ 20_Sleep_Study\ 21_Performance\ 22_DXDiag\ 23_Network\
- 24_Storage\ 25_App_Logs\
+ 13_Setup_Panther\       Panther\ mirrors C:\Windows\Panther
+ 14_Windows_Logs\        Logs\ mirrors C:\Windows\Logs
+ 15_Inf_Drivers\         INF\ mirrors C:\Windows\INF
+ 16_Battery\             battery_report.html
+ 17_Power_Settings\      power_settings.txt
+ 18_Sleep_Study\ 19_DXDiag\ 20_Network\ 21_Storage\
 
 Only the folders for the items you ticked are created.
 
@@ -139,30 +130,19 @@ left out (for example files that were locked or did not fit the free space).
 "Status: Skipped" means there was nothing to collect (for example no BSOD
 has occurred). The reason is written to README.txt inside that folder.
 
-6. Why there is no GB-sized memory file
+6. Memory dumps
 ----------------------------------------------------------------------
-Two different things produce memory dumps:
+Blue screen dumps are written by Windows, not by this tool. Whether you get
+a GB-sized file depends on the setting "Write debugging information":
 
-1) Blue screen dumps - written by Windows itself, not by this tool.
-   Whether you get a GB-sized file depends on "Write debugging information":
-     Small memory dump    ~256 KB per crash, MEMORY.DMP is never created
-     Kernel memory dump   MEMORY.DMP, usually 1-4 GB      <- usually enough
-     Complete memory dump MEMORY.DMP, about the size of RAM
-   To change it: This PC > Properties > Advanced system settings > Startup
-   and Recovery > Settings > "Write debugging information". A reboot is
-   required, and the file only appears after the next BSOD.
-   The page file must also be large enough (system managed, or >= 16 GB),
-   otherwise writing the dump fails.
+  Small memory dump    ~256 KB per crash, MEMORY.DMP is never created
+  Kernel memory dump   MEMORY.DMP, usually 1-4 GB      <- usually enough
+  Complete memory dump MEMORY.DMP, about the size of RAM
 
-2) Process memory dump - taken by this tool from a running process.
-   The file appears immediately and is roughly the size of that process's
-   memory (hundreds of MB to several GB).
-   Use it for memory leaks, hangs, freezes, "slower the longer it runs".
-   Tick "Process memory dump" and type the process name on the right
-   (e.g. chrome.exe); leave it empty to dump the largest process.
-
-If the symptom is "an app's memory keeps growing / it freezes", use 2).
-If it is "blue screen / unexpected restart", use 1) after fixing the setting.
+To change it: This PC > Properties > Advanced system settings > Startup and
+Recovery > Settings > "Write debugging information". A reboot is required,
+and the file only appears after the next BSOD. The page file must also be
+large enough (system managed, or >= 16 GB), otherwise writing the dump fails.
 
 7. FAQ
 ----------------------------------------------------------------------
@@ -180,28 +160,32 @@ A: Check the dump setting printed in 9_Crash_Dumps\README.txt. Most often
    the system is set to "Small memory dump" or no BSOD has occurred yet.
 
 Q: How long does a collection take?
-A: About 1.5 minutes with the default items; about 3 minutes with everything
-   (the energy report and performance sampling take a minute each).
+A: About 1.5 minutes with the default items; add a minute or two if you tick
+   the setup logs (Panther can be ~2 GB).
 
 Q: What are the actual sleep / hibernate timeouts?
-A: See 18_Power_Settings\power_settings.txt or the "Power and sleep settings"
+A: See 17_Power_Settings\power_settings.txt or the "Power and sleep settings"
    table in the report. AC (plugged in) and DC (battery) are listed
    separately. "Never" means it does not trigger automatically.
 
+Q: Where does the collector name go?
+A: Into Collected_By.txt in the package root, and into Collection_Info.txt
+   and the report header.
+
 Q: Why is there no SOURCE.txt or browse.html any more?
-A: They were removed in v2.0 to keep the package small. Where each file came
-   from is recorded once in Collection_Info.txt and in the report, and all
-   text content is in the single All_Content.html.
+A: They were removed to keep the package small. Where each file came from is
+   recorded in Collection_Info.txt and the report, and all text content is in
+   the single All_Content.html.
 
 8. Command line
 ----------------------------------------------------------------------
 LogCollector.exe /cli /out:D:\logs /jobs:events-system,sysinfo,minidump
 LogCollector.exe /cli /all /out:D:\logs /tag:SN1234567
-LogCollector.exe /cli /out:D:\logs /jobs:pdump /proc:chrome.exe
+LogCollector.exe /cli /out:D:\logs /jobs:disk /case:12345
 
 Options: /cli no UI, /out output folder, /jobs comma separated item ids,
 /all every item, /tag package name prefix, /case case id,
-/symptom symptom text, /proc target process for the memory dump.
+/symptom symptom text.
 
 9. Notes
 ----------------------------------------------------------------------
@@ -209,4 +193,5 @@ Options: /cli no UI, /out output folder, /jobs comma separated item ids,
   install anything.
 - Reports and logs may contain personal data (user names, paths, SSIDs).
   Handle them according to your data classification policy.
-- Process dumps can be large; watch the free disk space.
+- The .evtx mirror and the Panther folder can be large; watch the free disk
+  space.

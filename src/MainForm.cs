@@ -18,7 +18,7 @@ namespace LogCollector
 
         private Dictionary<string, CheckBox> _checks = new Dictionary<string, CheckBox>();
         private List<JobDef> _defs;
-        private TextBox _txtCase, _txtOperator, _txtSymptom, _txtAppDir, _txtOut, _txtProc;
+        private TextBox _txtCase, _txtOperator, _txtSymptom, _txtOut;
         private RichTextBox _log;
         private ProgressBar _bar;
         private Label _lblStatus, _lblMachine, _lblAdmin;
@@ -143,15 +143,23 @@ namespace LogCollector
             Button bDef = MakeSmallButton("Restore defaults", Color.Gray);
             bDef.Location = new Point(152, 0); bDef.Size = new Size(82, 26);
             bDef.Click += delegate { ResetDefault(); };
-            Label tip = new Label();
-            tip.Text = "Tick what to collect (blue titles are recommended defaults)";
-            tip.AutoSize = true;
-            tip.ForeColor = Color.Gray;
-            tip.Location = new Point(248, 5);
+            Label who = new Label();
+            who.Text = "Collected by:";
+            who.AutoSize = true;
+            who.ForeColor = Color.FromArgb(71, 85, 105);
+            who.Location = new Point(248, 6);
             quick.Controls.Add(bAll);
             quick.Controls.Add(bNone);
             quick.Controls.Add(bDef);
-            quick.Controls.Add(tip);
+            quick.Controls.Add(who);
+
+            _txtOperator = new TextBox();
+            _txtOperator.Location = new Point(330, 3);
+            _txtOperator.Size = new Size(210, 24);
+            _txtOperator.BorderStyle = BorderStyle.FixedSingle;
+            _txtOperator.BackColor = Color.White;
+            _txtOperator.Text = Environment.UserName;
+            quick.Controls.Add(_txtOperator);
             left.Controls.Add(quick);
             y = 36;
 
@@ -222,8 +230,6 @@ namespace LogCollector
 
             int ry = 44;
             ry = AddField(right, "Case ID", ref _txtCase, ry, false);
-            ry = AddField(right, "Collected by", ref _txtOperator, ry, false);
-            _txtOperator.Text = Environment.UserName;
 
             Label ls = new Label();
             ls.Text = "Symptom description";
@@ -241,45 +247,6 @@ namespace LogCollector
             _txtSymptom.BorderStyle = BorderStyle.FixedSingle;
             right.Controls.Add(_txtSymptom);
             ry += 128;
-
-            Label la = new Label();
-            la.Text = "Extra log folder (used when the item is ticked)";
-            la.AutoSize = true;
-            la.ForeColor = Color.FromArgb(71, 85, 105);
-            la.Location = new Point(16, ry);
-            right.Controls.Add(la);
-
-            _txtAppDir = new TextBox();
-            _txtAppDir.Location = new Point(16, ry + 22);
-            _txtAppDir.Size = new Size(268, 24);
-            _txtAppDir.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            right.Controls.Add(_txtAppDir);
-            Button bPick = MakeSmallButton("Browse...", Color.Gray);
-            bPick.Size = new Size(80, 24);
-            bPick.Location = new Point(292, ry + 22);
-            bPick.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            bPick.Click += delegate
-            {
-                FolderBrowserDialog f = new FolderBrowserDialog();
-                f.Description = "Select the log folder of the application under test";
-                if (f.ShowDialog(this) == DialogResult.OK) _txtAppDir.Text = f.SelectedPath;
-            };
-            right.Controls.Add(bPick);
-            ry += 60;
-
-            Label lp = new Label();
-            lp.Text = "Process name for dump (blank = largest)";
-            lp.AutoSize = true;
-            lp.ForeColor = Color.FromArgb(71, 85, 105);
-            lp.Location = new Point(16, ry);
-            right.Controls.Add(lp);
-
-            _txtProc = new TextBox();
-            _txtProc.Location = new Point(16, ry + 22);
-            _txtProc.Size = new Size(268, 24);
-            _txtProc.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            right.Controls.Add(_txtProc);
-            ry += 56;
 
             Label hint = new Label();
             hint.Text = "Notes:\r\n- Do not use the machine while collecting, especially performance and energy items.\r\n- For BSOD issues tick \"Blue screen dumps\" and collect right after the reboot.\r\n- Some items need administrator rights; without them they are marked as skipped.";
@@ -609,8 +576,6 @@ namespace LogCollector
             s.OperatorName = string.IsNullOrEmpty(_txtOperator.Text.Trim()) ? Environment.UserName : _txtOperator.Text.Trim();
             s.CaseId = _txtCase.Text.Trim();
             s.Symptom = _txtSymptom.Text.Trim();
-            s.AppDir = _txtAppDir.Text.Trim();
-            s.ProcessName = _txtProc.Text.Trim();
 
             bool needSerial = s.Info.Serial.Length == 0;
             string tag = needSerial ? s.Info.Model : s.Info.Serial;

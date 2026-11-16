@@ -17,7 +17,6 @@ namespace LogCollector
             d["events-system"] = "1_System_Logs";
             d["events-app"] = "2_Application_Logs";
             d["evtx-all"] = "3_All_Event_Logs";
-            d["evtxcsv"] = "3_All_Event_Logs";
             d["sysinfo"] = "4_System_Info";
             d["drivers"] = "5_Drivers_Devices";
             d["snapshot"] = "6_Runtime_Snapshot";
@@ -26,20 +25,16 @@ namespace LogCollector
             d["minidump"] = "9_Crash_Dumps";
             d["wer"] = "10_WER_Reports";
             d["memdump"] = "12_Memory_Dump";
-            d["pdump"] = "13_Process_Dump";
             d["livekernel"] = "11_LiveKernel_Reports";
-            d["panther"] = "14_Setup_Panther";
-            d["winlogs"] = "15_Windows_Logs";
-            d["inf"] = "16_Inf_Drivers";
-            d["battery"] = "17_Battery";
-            d["powercfg"] = "18_Power_Settings";
-            d["energy"] = "19_Energy_Report";
-            d["sleepstudy"] = "20_Sleep_Study";
-            d["perf"] = "21_Performance";
-            d["gpu"] = "22_DXDiag";
-            d["netcfg"] = "23_Network";
-            d["disk"] = "24_Storage";
-            d["appdir"] = "25_App_Logs";
+            d["panther"] = "13_Setup_Panther";
+            d["winlogs"] = "14_Windows_Logs";
+            d["inf"] = "15_Inf_Drivers";
+            d["battery"] = "16_Battery";
+            d["powercfg"] = "17_Power_Settings";
+            d["sleepstudy"] = "18_Sleep_Study";
+            d["gpu"] = "19_DXDiag";
+            d["netcfg"] = "20_Network";
+            d["disk"] = "21_Storage";
             return d;
         }
 
@@ -80,6 +75,20 @@ namespace LogCollector
             int total = jobs.Count;
             int failed = 0;
             Jobs.DumpPolicyRam(s.Info.RamGB);
+
+            // 收集人姓名单独写一份，放在包根目录
+            try
+            {
+                string who = string.IsNullOrEmpty(s.OperatorName) ? Environment.UserName : s.OperatorName;
+                StringBuilder w = new StringBuilder();
+                w.AppendLine("Collected by : " + who);
+                w.AppendLine("Package      : " + Path.GetFileName(s.OutDir));
+                w.AppendLine("Machine      : " + s.Info.Display() + "   SN " + s.Info.Serial);
+                w.AppendLine("Started      : " + start.ToString("yyyy-MM-dd HH:mm:ss"));
+                File.WriteAllText(Path.Combine(s.OutDir, "Collected_By.txt"), w.ToString(), new UTF8Encoding(true));
+            }
+            catch { }
+
             s.Log("Package: " + Path.GetFileName(s.OutDir)
                   + (string.IsNullOrEmpty(s.Info.Serial) ? "  (BIOS serial not available, named after the model)" : ""));
 
@@ -210,15 +219,15 @@ namespace LogCollector
             b.AppendLine("3. BSOD: open the .dmp file under 9_Crash_Dumps with WinDbg;");
             b.AppendLine("4. Event logs: double-click 1_System_Logs/System.evtx to open it in Event Viewer,");
             b.AppendLine("   or read 1_System_Logs/System_events.csv for every event with the full message;");
-            b.AppendLine("5. Battery: open 17_Battery/battery_report.html;");
-            b.AppendLine("6. Power settings: see 18_Power_Settings/power_settings.txt (sleep/hibernate/display timeouts, lid action).");
+            b.AppendLine("5. Battery: open 16_Battery/battery_report.html;");
+            b.AppendLine("6. Power settings: see 17_Power_Settings/power_settings.txt (sleep/hibernate/display timeouts, lid action).");
             return b.ToString();
         }
     }
 
     static class Program
     {
-        public const string Version = "2.0";
+        public const string Version = "2.1";
 
         [STAThread]
         static int Main(string[] args)

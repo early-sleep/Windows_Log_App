@@ -20,7 +20,6 @@ namespace LogCollector
             list.Add(new JobDef { Id = "events-system", Category = "Basics", Name = "System event log", Hint = "BSOD, unexpected shutdown, driver and hardware errors (~15 s)", DefaultOn = true, Run = Jobs.SystemEvents });
             list.Add(new JobDef { Id = "events-app", Category = "Basics", Name = "Application event log", Hint = "App crashes and hangs (~10 s)", DefaultOn = true, Run = Jobs.AppEvents });
             list.Add(new JobDef { Id = "evtx-all", Category = "Basics", Name = "All event log files (.evtx)", Hint = "Mirrors winevt\\Logs incl. empty folders (~30 s as admin); ~2 min without", DefaultOn = true, Run = Jobs.AllEventLogs });
-            list.Add(new JobDef { Id = "evtxcsv", Category = "Basics", Name = "Event logs as CSV (every channel)", Hint = "Converts every collected .evtx to CSV; up to 20 min, skips logs over 26 MB", DefaultOn = false, Run = Jobs.EventCsvAll });
             list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info (systeminfo)", Hint = "Full systeminfo report (~10 s)", DefaultOn = true, Run = Jobs.SysInfo });
             list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Driver store and problem devices", Hint = "Driver store listing + devices with a yellow mark (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
             list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Running processes", Hint = "Every process running at collection time (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
@@ -31,7 +30,6 @@ namespace LogCollector
             list.Add(new JobDef { Id = "wer", Category = "Crashes and dumps", Name = "WER crash reports (full folder)", Hint = "Mirrors C:\\ProgramData\\Microsoft\\Windows\\WER; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.Wer });
             list.Add(new JobDef { Id = "livekernel", Category = "Crashes and dumps", Name = "Live kernel reports", Hint = "Mirrors C:\\Windows\\LiveKernelReports; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.LiveKernel });
             list.Add(new JobDef { Id = "memdump", Category = "Crashes and dumps", Name = "Full memory dump (MEMORY.DMP)", Hint = "Up to several GB; only if the system already created it", DefaultOn = false, Run = Jobs.MemDump });
-            list.Add(new JobDef { Id = "pdump", Category = "Crashes and dumps", Name = "Process memory dump (GB, target process)", Hint = "For leaks/hangs; enter a process name on the right (~10-60 s)", DefaultOn = false, Run = Jobs.ProcessDump });
 
             list.Add(new JobDef { Id = "panther", Category = "Setup and component logs", Name = "Windows setup logs (Panther)", Hint = "Mirrors C:\\Windows\\Panther; can be ~2 GB; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.PantherLogs });
             list.Add(new JobDef { Id = "winlogs", Category = "Setup and component logs", Name = "Windows component logs", Hint = "Mirrors C:\\Windows\\Logs (CBS, DISM, WindowsUpdate, WinRE)", DefaultOn = true, Run = Jobs.WindowsLogs });
@@ -39,17 +37,14 @@ namespace LogCollector
 
             list.Add(new JobDef { Id = "battery", Category = "Power and battery", Name = "Battery health report", Hint = "Capacity, cycles, health (~5 s)", DefaultOn = true, Run = Jobs.Battery });
             list.Add(new JobDef { Id = "powercfg", Category = "Power and battery", Name = "Power settings", Hint = "Sleep and display timeouts, lid action (~5 s)", DefaultOn = true, Run = Jobs.PowerCfg });
-            list.Add(new JobDef { Id = "energy", Category = "Power and battery", Name = "Energy report (60 s audit)", Hint = "Requires admin (~60 s)", DefaultOn = false, NeedAdmin = true, Run = Jobs.Energy });
             list.Add(new JobDef { Id = "sleepstudy", Category = "Power and battery", Name = "Sleep study + system power report", Hint = "powercfg /sleepstudy and /spr; requires admin (~60 s)", DefaultOn = true, NeedAdmin = true, Run = Jobs.SleepStudy });
 
-            list.Add(new JobDef { Id = "perf", Category = "Performance", Name = "Performance sampling (30 s: CPU/memory/disk)", Hint = "~35 s; do not use the machine while sampling", DefaultOn = false, Run = Jobs.Perf });
             list.Add(new JobDef { Id = "gpu", Category = "Performance", Name = "DXDiag (graphics and display)", Hint = "Includes TDR records (~20 s)", DefaultOn = true, Run = Jobs.Gpu });
 
             list.Add(new JobDef { Id = "netcfg", Category = "Network", Name = "Network configuration snapshot", Hint = "IP, routes, Wi-Fi, Bluetooth (~5 s)", DefaultOn = true, Run = Jobs.NetCfg });
 
             list.Add(new JobDef { Id = "disk", Category = "Storage", Name = "Disk and SMART health", Hint = "Health, temperature, power-on hours (~5 s)", DefaultOn = true, Run = Jobs.Disk });
 
-            list.Add(new JobDef { Id = "appdir", Category = "Other", Name = "Extra log folder (custom path)", Hint = "Logs of the application under test", DefaultOn = false, Run = Jobs.AppDir });
 
             return list;
         }
@@ -690,78 +685,6 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
             }
             catch (Exception ex) { throw new Exception("Failed to copy MEMORY.DMP: " + ex.Message); }
         }
-
-        /// <summary>Full memory dump of a process (GB sized) for leaks, hangs and freezes.</summary>
-        public static void ProcessDump(Session s)
-        {
-            string dir = s.Dir("13_Process_Dump");
-            s.Source(dir, @"live process memory (MiniDumpWriteDump)", "dumped from the running process");
-            string name = (s.ProcessName ?? "").Trim();
-            if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
-                name = name.Substring(0, name.Length - 4);
-
-            Process target = null;
-            if (name.Length == 0)
-            {
-                foreach (Process p in Process.GetProcesses())
-                {
-                    try
-                    {
-                        if (target == null || p.WorkingSet64 > target.WorkingSet64) target = p;
-                    }
-                    catch { }
-                }
-                if (target == null) throw new SkippedException("No process available to dump");
-                s.Log("  · No process name given; using the largest one: " + target.ProcessName + " (" + target.Id + ")");
-            }
-            else
-            {
-                Process[] arr = Process.GetProcessesByName(name);
-                if (arr.Length == 0) throw new SkippedException("Process not found: " + name + " (check the name, e.g. chrome)");
-                target = arr[0];
-                if (arr.Length > 1) s.Log("  · Found " + arr.Length + " processes with that name; dumping the first (PID " + target.Id + "）");
-            }
-
-            long ws = 0;
-            try { ws = target.WorkingSet64; } catch { }
-            if (ws > 12L * 1024 * 1024 * 1024)
-                throw new SkippedException("Target process uses " + Tool.FmtSize(ws) + ", above the 12 GB limit; skipped");
-            if (ws > 1L * 1024 * 1024 * 1024)
-                s.Log("  · Target process uses " + Tool.FmtSize(ws) + "; dumping may take tens of seconds");
-
-            string file = Path.Combine(dir, Runner.SafeName(target.ProcessName) + "_" + target.Id + "_"
-                                      + DateTime.Now.ToString("HHmmss") + ".dmp");
-            bool ok = false;
-            int err = 0;
-            try
-            {
-                using (FileStream fs = new FileStream(file, FileMode.Create, FileAccess.Write, FileShare.None))
-                {
-                    IntPtr hProc = target.Handle;
-                    ok = MiniDumpWriteDump(hProc, (uint)target.Id, fs.SafeFileHandle.DangerousGetHandle(),
-                                           2 /*MiniDumpWithFullMemory*/, IntPtr.Zero, IntPtr.Zero, IntPtr.Zero);
-                    if (!ok) err = Marshal.GetLastWin32Error();
-                }
-            }
-            catch (Exception ex)
-            {
-                throw new Exception("Failed to create process dump: " + ex.Message + " (usually needs admin rights, or the process is protected)");
-            }
-            if (!ok)
-            {
-                try { File.Delete(file); } catch { }
-                throw new Exception("Failed to write process dump, error " + err + " (protected process or insufficient rights; run as administrator)");
-            }
-            long size = 0;
-            try { size = new FileInfo(file).Length; } catch { }
-            if (size == 0) throw new Exception("Dump file is empty; retry as administrator");
-            s.Log("  · Created " + Path.GetFileName(file) + "，" + Tool.FmtSize(size));
-        }
-
-        [System.Runtime.InteropServices.DllImport("dbghelp.dll", SetLastError = true)]
-        private static extern bool MiniDumpWriteDump(IntPtr hProcess, uint processId, IntPtr hFile,
-            uint dumpType, IntPtr exceptionParam, IntPtr userStreamParam, IntPtr callbackParam);
-
         public static void Wer(Session s)
         {
             string dir = s.Dir("10_WER_Reports");
@@ -805,73 +728,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
                   + (failed > 0 ? ", " + failed + " failed" : ""));
         }
 
-        /// <summary>把 3_All_Event_Logs 下已经采到的每个 .evtx 转成同名 .csv（完整内容）。</summary>
-        public static void EventCsvAll(Session s)
-        {
-            string dir = s.Dir("3_All_Event_Logs");
-            string src = Path.Combine(dir, "Logs");
-            if (!Directory.Exists(src)) src = Path.Combine(dir, "Channels");
-            if (!Directory.Exists(src)) throw new SkippedException("No .evtx found - run 'All event log files (.evtx)' first");
-
-            string csvRoot = Path.Combine(dir, "Csv");
-            Directory.CreateDirectory(csvRoot);
-            s.Source(csvRoot, src, "every .evtx converted to CSV with Get-WinEvent -Path");
-
-            string outPs = csvRoot.Replace("'", "''");
-            string srcPs = src.Replace("'", "''");
-            string script = @"
-$src = '" + srcPs + @"'
-$dst = '" + outPs + @"'
-$files = @(Get-ChildItem -LiteralPath $src -Filter *.evtx -Recurse -ErrorAction SilentlyContinue | Sort-Object Length)
-Write-Output ('files=' + $files.Count)
-$deadline = (Get-Date).AddMinutes(20)
-$i = 0
-$skipped = 0
-foreach ($f in $files) {
-  if ((Get-Date) -gt $deadline) { Write-Output 'timeout=1'; break }
-  if ($f.Length -gt 26MB) { $skipped++; continue }
-  $rel = $f.FullName.Substring($src.Length).TrimStart('\')
-  $out = Join-Path $dst ($rel + '.csv')
-  $parent = Split-Path $out -Parent
-  if (-not (Test-Path -LiteralPath $parent)) { New-Item -ItemType Directory -Path $parent -Force | Out-Null }
-  try {
-    $ev = Get-WinEvent -Path $f.FullName -Oldest -ErrorAction Stop
-    $ev | Select-Object @{n='TimeCreated';e={$_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')}},
-                        @{n='EventID';e={$_.Id}},
-                        @{n='Level';e={$_.LevelDisplayName}},
-                        @{n='Provider';e={$_.ProviderName}},
-                        @{n='User';e={$_.UserId}},
-                        @{n='Data';e={ (@($_.Properties) | ForEach-Object { $_.Value }) -join ' | ' }},
-                        @{n='Message';e={ ([string]$_.Message) -replace ""[`r`n]+"",' ' }} |
-      Export-Csv -Path $out -NoTypeInformation -Encoding UTF8
-  } catch { }
-  $i++
-  if (($i % 100) -eq 0) { Write-Output ('progress=' + $i) }
-}
-Write-Output ('done=' + $i)
-Write-Output ('skipped=' + $skipped)
-Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyContinue | Where-Object { $_.Length -lt 50 } | Remove-Item -Force -ErrorAction SilentlyContinue
-";
-            string outp = Tool.Ps(script, 1500000, s.Token);
-            int done = 0, total = 0, skipped = 0;
-            bool timeout = false;
-            foreach (string line in (outp ?? "").Split('\n'))
-            {
-                string l = line.Trim();
-                if (l.StartsWith("files=")) int.TryParse(l.Substring(6), out total);
-                if (l.StartsWith("done=")) int.TryParse(l.Substring(5), out done);
-                if (l.StartsWith("skipped=")) int.TryParse(l.Substring(8), out skipped);
-                if (l.StartsWith("timeout=")) timeout = true;
-            }
-            long bytes = 0;
-            try { bytes = Tool.DirSize(csvRoot); } catch { }
-            if (done == 0) throw new SkippedException("No event could be converted to CSV");
-            s.Log("  · " + done + "/" + total + " evtx -> csv, " + Tool.FmtSize(bytes)
-                  + (skipped > 0 ? ", " + skipped + " larger than 26 MB skipped" : "")
-                  + (timeout ? ", stopped at the 20 minute budget" : ""));
-        }
-
-        /// <summary>通用整目录镜像任务。</summary>
+﻿        /// <summary>通用整目录镜像任务。</summary>
         private static void MirrorJob(Session s, string folder, string root, string method, long capBytes)
         {
             string dir = s.Dir(folder);
@@ -889,24 +746,23 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
                   + (failed > 0 ? ", " + failed + " failed" : ""));
         }
 
-        /// <summary>C:\Windows\Panther —— 安装/迁移日志（setupact.log 可能有 1 GB）。</summary>
         public static void PantherLogs(Session s)
         {
-            MirrorJob(s, "14_Setup_Panther", @"C:\Windows\Panther",
+            MirrorJob(s, "13_Setup_Panther", @"C:\Windows\Panther",
                       "full folder mirror, structure and empty folders preserved (needs admin)", 2560L * 1024 * 1024);
         }
 
         /// <summary>C:\Windows\Logs —— CBS / DISM / WindowsUpdate 等组件日志。</summary>
         public static void WindowsLogs(Session s)
         {
-            MirrorJob(s, "15_Windows_Logs", @"C:\Windows\Logs",
+            MirrorJob(s, "14_Windows_Logs", @"C:\Windows\Logs",
                       "full folder mirror, structure and empty folders preserved", 2048L * 1024 * 1024);
         }
 
         /// <summary>C:\Windows\INF —— 驱动 INF 与 setupapi 设备安装日志。</summary>
         public static void InfFolder(Session s)
         {
-            MirrorJob(s, "16_Inf_Drivers", @"C:\Windows\INF",
+            MirrorJob(s, "15_Inf_Drivers", @"C:\Windows\INF",
                       "full folder mirror, structure and empty folders preserved", 1024L * 1024 * 1024);
         }
 
@@ -983,7 +839,7 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
         // ---------------- power ----------------
         public static void Battery(Session s)
         {
-            string dir = s.Dir("17_Battery");
+            string dir = s.Dir("16_Battery");
             s.Source(dir, @"powercfg /batteryreport", "generated on this machine");
             string o;
             string f = Path.Combine(dir, "battery_report.html");
@@ -1014,7 +870,7 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
 
         public static void PowerCfg(Session s)
         {
-            string dir = s.Dir("18_Power_Settings");
+            string dir = s.Dir("17_Power_Settings");
             s.Source(dir, @"powercfg /qh, /a, /getactivescheme, /requests, /lastwake, /waketimers", "queried from the running system");
             CollectPowerSettings(s, dir);
         }
@@ -1124,21 +980,9 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
             return mm == 0 ? h + " h" : h + " h " + mm + " min";
         }
 
-        public static void Energy(Session s)
-        {
-            string dir = s.Dir("19_Energy_Report");
-            s.Source(dir, @"powercfg /energy /duration 60", "generated on this machine");
-            string f = Path.Combine(dir, "energy_report.html");
-            string o;
-            int rc = Tool.Run("powercfg.exe", "/energy /output " + Tool.Q(f) + " /duration 60",
-                              180000, s.Token, out o, Encoding.Default);
-            WaitFile(f, 30000, s.Token);
-            if (!File.Exists(f)) throw new Exception("Energy report failed (requires admin): " + Trim(o, 200));
-        }
-
         public static void SleepStudy(Session s)
         {
-            string dir = s.Dir("20_Sleep_Study");
+            string dir = s.Dir("18_Sleep_Study");
             s.Source(dir, @"powercfg /sleepstudy  +  powercfg /spr  ->  C:\Windows\System32\sleepstudy-report.html",
                      "reports generated on this machine (needs administrator)");
             string f = Path.Combine(dir, "sleep_study.html");
@@ -1168,37 +1012,9 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
         }
 
         // ---------------- performance ----------------
-        public static void Perf(Session s)
-        {
-            string dir = s.Dir("21_Performance");
-            s.Source(dir, @"performance counters (Win32_PerfFormattedData)", "sampled for 20 seconds");
-            string ps = @"
-[System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
-Write-Output 'Time,CPU%,FreeMemMB,CommittedMB,DiskBusy%,CPUMHz,Battery%'
-for($i=0; $i -lt 20; $i++){
-  $cpu = ''
-  try { $cpu = [string](Get-CimInstance Win32_PerfFormattedData_PerfOS_Processor -Filter ""Name='_Total'"").PercentProcessorTime } catch {}
-  $availM = ''; $commitM = ''
-  try { $m = Get-CimInstance Win32_PerfFormattedData_PerfOS_Memory; $availM = [string][math]::Round($m.AvailableMBytes,0); $commitM = [string][math]::Round($m.CommittedBytes/1MB,0) } catch {}
-  $disk = ''
-  try { $disk = [string](Get-CimInstance Win32_PerfFormattedData_PerfDisk_LogicalDisk -Filter ""Name='_Total'"").PercentDiskTime } catch {}
-  $freq = ''
-  try { $freq = [string](Get-CimInstance Win32_Processor | Select-Object -First 1).CurrentClockSpeed } catch {}
-  $bat = ''
-  try { $bat = [string](Get-CimInstance Win32_Battery | Select-Object -First 1).EstimatedChargeRemaining } catch {}
-  $t = (Get-Date).ToString('HH:mm:ss')
-  Write-Output ($t + ',' + $cpu + ',' + $availM + ',' + $commitM + ',' + $disk + ',' + $freq + ',' + $bat)
-  Start-Sleep -Seconds 1
-}
-";
-            string outp = Tool.Ps(ps, 240000, s.Token);
-            if (outp.Trim().Length == 0) throw new Exception("Performance sampling returned no data");
-            File.WriteAllText(Path.Combine(dir, "perf_sample.csv"), outp, new UTF8Encoding(true));
-        }
-
         public static void Gpu(Session s)
         {
-            string dir = s.Dir("22_DXDiag");
+            string dir = s.Dir("19_DXDiag");
             s.Source(dir, @"dxdiag /t", "generated on this machine");
             string f = Path.Combine(dir, "dxdiag.txt");
             string o;
@@ -1210,7 +1026,7 @@ for($i=0; $i -lt 20; $i++){
         // ---------------- network ----------------
         public static void NetCfg(Session s)
         {
-            string dir = s.Dir("23_Network");
+            string dir = s.Dir("20_Network");
             s.Source(dir, @"ipconfig /all, route print, arp -a, netsh wlan / int tcp", "queried from the running system");
             StringBuilder sb = new StringBuilder();
             string[][] cmds = new string[][] {
@@ -1237,7 +1053,7 @@ for($i=0; $i -lt 20; $i++){
         // ---------------- storage ----------------
         public static void Disk(Session s)
         {
-            string dir = s.Dir("24_Storage");
+            string dir = s.Dir("21_Storage");
             s.Source(dir, @"Get-PhysicalDisk / Get-Volume / Get-StorageReliabilityCounter", "queried from the running system");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
@@ -1263,16 +1079,6 @@ Get-Disk | Select-Object Number,FriendlyName,PartitionStyle,@{n='SizeGB';e={[mat
         }
 
         // ---------------- extra ----------------
-        public static void AppDir(Session s)
-        {
-            if (string.IsNullOrEmpty(s.AppDir) || !Directory.Exists(s.AppDir))
-                throw new Exception("No valid extra log folder specified");
-            string dir = s.Dir("25_App_Logs");
-            s.Source(dir, s.AppDir, "copied from the folder entered in the UI");
-            long bytes = CopyTree(s.AppDir, Path.Combine(dir, new DirectoryInfo(s.AppDir).Name), 1500L * 1024 * 1024);
-            if (bytes == 0) WriteNothing(dir, "Target folder is empty or unreadable: " + s.AppDir);
-        }
-
         // ---------------- helpers ----------------
         private static void ParseEvents(string tsv, string logName, Session s)
         {

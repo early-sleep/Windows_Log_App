@@ -422,21 +422,17 @@ namespace LogCollector
                 case "8_msinfo32": return "msinfo32 full report (optional)";
                 case "9_Crash_Dumps": return "Crash dump files for WinDbg";
                 case "10_WER_Reports": return "Windows Error Reporting (WER)";
-                case "12_Memory_Dump": return "Full memory dump (large)";
-                case "13_Process_Dump": return "Process memory dump (opens in WinDbg)";
                 case "11_LiveKernel_Reports": return "Live kernel reports (GPU hangs/timeouts, no BSOD)";
-                case "14_Setup_Panther": return "Windows setup logs (Panther): setupact, migration, rollback";
-                case "15_Windows_Logs": return "Windows component logs: CBS, DISM, WindowsUpdate, WinRE";
-                case "16_Inf_Drivers": return "Driver INF files and setupapi device install logs";
-                case "17_Battery": return "Battery health report";
-                case "18_Power_Settings": return "Power and sleep timeouts of the active scheme";
-                case "19_Energy_Report": return "Energy audit (60 s)";
-                case "20_Sleep_Study": return "Sleep study and system power report (powercfg /sleepstudy, /spr)";
-                case "21_Performance": return "CPU / memory / disk sampling";
-                case "22_DXDiag": return "dxdiag report (graphics and display)";
-                case "23_Network": return "Network config, Wi-Fi interfaces and drivers";
-                case "24_Storage": return "Disk and SMART health";
-                case "25_App_Logs": return "Extra logs from the given folder";
+                case "12_Memory_Dump": return "Full memory dump (large)";
+                case "13_Setup_Panther": return "Windows setup logs (Panther): setupact, migration, rollback";
+                case "14_Windows_Logs": return "Windows component logs: CBS, DISM, WindowsUpdate, WinRE";
+                case "15_Inf_Drivers": return "Driver INF files and setupapi device install logs";
+                case "16_Battery": return "Battery health report";
+                case "17_Power_Settings": return "Power and sleep timeouts of the active scheme";
+                case "18_Sleep_Study": return "Sleep study and system power report (powercfg /sleepstudy, /spr)";
+                case "19_DXDiag": return "dxdiag report (graphics and display)";
+                case "20_Network": return "Network config, Wi-Fi interfaces and drivers";
+                case "21_Storage": return "Disk and SMART health";
             }
             return "";
         }

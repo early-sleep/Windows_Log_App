@@ -17,6 +17,7 @@ Every release gets its own branch; `main` always tracks the latest development s
 | Branch | Version | Notes |
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
+| `v2.0` | v2.0 | folders renumbered from 1, WLAN report and per-folder browse/SOURCE files removed, trimmed items (systeminfo only, driver store + yellow-mark devices, all running processes, power settings only), DXDiag, "Installed updates and software"; the same number is shown in front of every item in the UI |
 | `v1.8` | v1.8 | added Log Analyzer: local web UI to browse a package and have AI analyse selected logs |
 | `v1.9` | v1.9 | System/Application logs exported to CSV with every event and full messages, plus an errors-only CSV and an optional all-channels conversion |
 | `v1.7` | v1.7 | `C:\Windows\Panther`, `C:\Windows\Logs`, `C:\Windows\INF` mirrored with their folder structure |
@@ -34,14 +35,19 @@ New release: work on `main`, then `git branch vX.Y` and tag it with the same nam
 
 | Group | Items |
 |---|---|
-| Basics | System event log + key event analysis, application event log, all .evtx files, system info and hardware details, drivers and devices, processes/services/startup, patches and installed software, msinfo32 (optional) |
-| Crashes and dumps | Blue screen dumps (Minidump), WER crash reports (full `C:\ProgramData\Microsoft\Windows\WER` mirror), Live kernel reports (`C:\Windows\LiveKernelReports` mirror), MEMORY.DMP, process memory dump |
-| Power and battery | Battery health report, power settings and wake sources (sleep/hibernate/display/disk timeouts, lid and power button action, hybrid sleep), energy report, sleep study + `powercfg /spr` system power report |
-| Performance | Performance sampling (30 s), dxdiag graphics info |
-| Network | Network configuration snapshot, Wi-Fi connection history |
-| Storage | Disk and SMART health |
-| Setup and component logs | Panther setup logs, `C:\Windows\Logs` (CBS/DISM/WindowsUpdate), `C:\Windows\INF` driver INFs and setupapi logs |
-| Other | Extra log folder (custom path) |
+The number in front of each item is the number of its output folder (item 5 writes to
+`5_Drivers_Devices`) and they run in that order.
+
+| # | Group | Items |
+|---|---|---|
+| 1-8 | Basics | System event log, application event log, all .evtx files, event logs as CSV (optional), systeminfo, driver store + problem devices, running processes, installed updates and software, msinfo32 (optional) |
+| 9-13 | Crashes and dumps | Blue screen dumps (Minidump), WER crash reports (full `C:\ProgramData\Microsoft\Windows\WER` mirror), Live kernel reports (`C:\Windows\LiveKernelReports` mirror), MEMORY.DMP, process memory dump |
+| 14-16 | Setup and component logs | Panther setup logs, `C:\Windows\Logs` (CBS/DISM/WindowsUpdate), `C:\Windows\INF` driver INFs and setupapi logs |
+| 17-20 | Power and battery | Battery health report, power settings, energy report, sleep study + `powercfg /spr` system power report |
+| 21-22 | Performance | Performance sampling (30 s), DXDiag |
+| 23 | Network | Network configuration snapshot |
+| 24 | Storage | Disk and SMART health |
+| 25 | Other | Extra log folder (custom path) |
 
 ## Output
 
@@ -49,9 +55,7 @@ Each run creates `<serial>_<timestamp>/` containing:
 
 - `report.html` — key findings, event timeline, hardware, battery and power settings
 - `All_Content.html` — every text file in one browsable page (sidebar + collapsible blocks)
-- `browse.html` in each subfolder — that folder's text content in a browser
 - `Collection_Info.txt` — what was collected, status and how to read it
-- `SOURCE.txt` in every subfolder — source path, method and time for the files in it, so the package can be verified against the original logs
 - Raw logs: `System.evtx`, `Application.evtx`, `*.dmp`, CSV/TXT exports
 - `System_events.csv` / `Application_events.csv` - every event in the log with the full message text
 - `System_errors.csv` / `Application_errors.csv` - errors and warnings only, small enough to hand to an AI
@@ -69,7 +73,8 @@ No Visual Studio required — the .NET Framework compiler shipped with Windows i
 
 Output goes to `build\LogCollector.exe`.
 
-The web UI lives in `analyzer/` and is built with `analyzer\build.ps1`.
+The log analyser is a separate application in its own repository:
+https://github.com/early-sleep/BSOD_analyse
 
 ## Command line
 

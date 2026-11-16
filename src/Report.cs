@@ -42,8 +42,8 @@ namespace LogCollector
 
             // ---------- quick links ----------
             b.Append("<div class=\"quick\">Key files:"
-                   + " <a href=\"10_System_Logs/System.evtx\">System.evtx</a>"
-                   + " <a href=\"11_Application_Logs/Application.evtx\">Application.evtx</a>"
+                   + " <a href=\"1_System_Logs/System.evtx\">System.evtx</a>"
+                   + " <a href=\"2_Application_Logs/Application.evtx\">Application.evtx</a>"
                    + " <a href=\"All_Content.html\">All content</a>"
                    + " <a href=\"Collection_Info.txt\">Collection info</a></div>");
 
@@ -127,7 +127,7 @@ namespace LogCollector
                 if (skipped > 0)
                 {
                     b.Append("<tr><td colspan=\"5\" class=\"msg\">").Append(skipped)
-                     .Append(" more similar or older events are not listed; see the CSVs in 10_System_Logs and 11_Application_Logs.</td></tr>");
+                     .Append(" more similar or older events are not listed; see the CSVs in 1_System_Logs and 2_Application_Logs.</td></tr>");
                 }
                 b.Append("</tbody></table>");
             }
@@ -184,10 +184,8 @@ namespace LogCollector
                 foreach (string d in Directory.GetDirectories(s.OutDir))
                 {
                     string name = Path.GetFileName(d);
-                    bool hasPage = File.Exists(Path.Combine(d, "browse.html"));
                     b.Append("<tr><td class=\"mono\">");
-                    if (hasPage) b.Append("<a href=\"").Append(H(name)).Append("/browse.html\">").Append(H(name)).Append("/</a>");
-                    else b.Append(H(name)).Append("/");
+                    b.Append(H(name)).Append("/");
                     b.Append("</td><td class=\"mono\">")
                      .Append(Tool.FmtSize(Tool.DirSize(d))).Append("</td><td class=\"msg\">")
                      .Append(H(Explain(name))).Append("</td></tr>");
@@ -195,7 +193,7 @@ namespace LogCollector
             }
             catch { }
             b.Append("</tbody></table>");
-            b.Append("<div class=\"msg\" style=\"margin-top:8px\">All text files are also available in <a href=\"All_Content.html\">All_Content.html</a>, or per folder via browse.html.</div>");
+            b.Append("<div class=\"msg\" style=\"margin-top:8px\">All text files are also available in <a href=\"All_Content.html\">All_Content.html</a>.</div>");
             b.Append("</div>");
 
             // ---------- footer ----------
@@ -287,7 +285,7 @@ namespace LogCollector
                 list.Add(new Finding("warn", th + " processor throttling event(s) caused by firmware; may be triggered by temperature or power policy."));
             int appCrash = CountApp(s);
             if (appCrash > 0)
-                list.Add(new Finding("warn", appCrash + " application crash or hang(s) in the last 7 days; see 11_Application_Logs."));
+                list.Add(new Finding("warn", appCrash + " application crash or hang(s) in the last 7 days; see 2_Application_Logs."));
             int pnp = CountProbe(s, "PNP.");
             if (pnp > 0)
             {
@@ -298,7 +296,7 @@ namespace LogCollector
                 }
                 list.Add(new Finding("warn", pnp + " device(s) report a driver error code: " + string.Join(", ", names.ToArray()) + "."));
             }
-            int dumps = CountFiles(Path.Combine(s.OutDir, "30_Crash_Dumps"), "*.dmp", true);
+            int dumps = CountFiles(Path.Combine(s.OutDir, "9_Crash_Dumps"), "*.dmp", true);
             if (dumps > 0)
                 list.Add(new Finding("info", dumps + " memory dump file(s) collected; analyse with WinDbg or BlueScreenView."));
             if (dumps == 0 && bug > 0)
@@ -412,32 +410,34 @@ namespace LogCollector
 
         private static string Explain(string dir)
         {
-            if (dir.StartsWith("10")) return "Raw system event log and key events table";
-            if (dir.StartsWith("11")) return "Application event log and crash records";
-            if (dir.StartsWith("12")) return "All .evtx files from winevt\\Logs (exact mirror incl. empty folders when run as admin; per-channel export otherwise)";
-            if (dir.StartsWith("20")) return "System info, hardware details, summary";
-            if (dir.StartsWith("21")) return "Driver list, driver store, problem devices";
-            if (dir.StartsWith("22")) return "Processes, services, startup, scheduled tasks";
-            if (dir.StartsWith("23")) return "Updates and installed software";
-            if (dir.StartsWith("24")) return "msinfo32 full report (optional)";
-            if (dir.StartsWith("30")) return "Crash dump files for WinDbg";
-            if (dir.StartsWith("31")) return "Windows Error Reporting (WER)";
-            if (dir.StartsWith("32")) return "Full memory dump (large)";
-            if (dir.StartsWith("33")) return "Process memory dump (opens in WinDbg)";
-            if (dir.StartsWith("34")) return "Live kernel reports (GPU hangs/timeouts, no BSOD)";
-            if (dir.StartsWith("40")) return "Battery health report";
-            if (dir.StartsWith("41")) return "Power scheme, sleep states, wake sources";
-            if (dir.StartsWith("42")) return "Energy audit (60 s)";
-            if (dir.StartsWith("43")) return "Sleep study and system power report (powercfg /sleepstudy, /spr)";
-            if (dir.StartsWith("50")) return "CPU / memory / disk sampling";
-            if (dir.StartsWith("60")) return "dxdiag and graphics driver info";
-            if (dir.StartsWith("70")) return "Network config, Wi-Fi interfaces and drivers";
-            if (dir.StartsWith("71")) return "Wi-Fi connection history timeline";
-            if (dir.StartsWith("80")) return "Disk and SMART health";
-            if (dir.StartsWith("35")) return "Windows setup logs (Panther): setupact, migration, rollback";
-            if (dir.StartsWith("36")) return "Windows component logs: CBS, DISM, WindowsUpdate, WinRE";
-            if (dir.StartsWith("37")) return "Driver INF files and setupapi device install logs";
-            if (dir.StartsWith("90")) return "Extra logs from the given folder";
+            switch (dir)
+            {
+                case "1_System_Logs": return "Raw system event log and the full CSV export";
+                case "2_Application_Logs": return "Application event log and the full CSV export";
+                case "3_All_Event_Logs": return "All .evtx files from winevt\\Logs (exact mirror incl. empty folders when run as admin; per-channel export otherwise)";
+                case "4_System_Info": return "systeminfo report";
+                case "5_Drivers_Devices": return "Driver store listing and devices with a problem code";
+                case "6_Runtime_Snapshot": return "All running processes";
+                case "7_Installed_Updates_and_Software": return "Installed updates and software";
+                case "8_msinfo32": return "msinfo32 full report (optional)";
+                case "9_Crash_Dumps": return "Crash dump files for WinDbg";
+                case "10_WER_Reports": return "Windows Error Reporting (WER)";
+                case "12_Memory_Dump": return "Full memory dump (large)";
+                case "13_Process_Dump": return "Process memory dump (opens in WinDbg)";
+                case "11_LiveKernel_Reports": return "Live kernel reports (GPU hangs/timeouts, no BSOD)";
+                case "14_Setup_Panther": return "Windows setup logs (Panther): setupact, migration, rollback";
+                case "15_Windows_Logs": return "Windows component logs: CBS, DISM, WindowsUpdate, WinRE";
+                case "16_Inf_Drivers": return "Driver INF files and setupapi device install logs";
+                case "17_Battery": return "Battery health report";
+                case "18_Power_Settings": return "Power and sleep timeouts of the active scheme";
+                case "19_Energy_Report": return "Energy audit (60 s)";
+                case "20_Sleep_Study": return "Sleep study and system power report (powercfg /sleepstudy, /spr)";
+                case "21_Performance": return "CPU / memory / disk sampling";
+                case "22_DXDiag": return "dxdiag report (graphics and display)";
+                case "23_Network": return "Network config, Wi-Fi interfaces and drivers";
+                case "24_Storage": return "Disk and SMART health";
+                case "25_App_Logs": return "Extra logs from the given folder";
+            }
             return "";
         }
 

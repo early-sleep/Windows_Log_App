@@ -17,14 +17,14 @@ namespace LogCollector
         {
             List<JobDef> list = new List<JobDef>();
 
-            list.Add(new JobDef { Id = "events-system", Category = "Basics", Name = "System event log + key event analysis", Hint = "BSOD, unexpected shutdown, driver and hardware errors (~10 s)", DefaultOn = true, Run = Jobs.SystemEvents });
+            list.Add(new JobDef { Id = "events-system", Category = "Basics", Name = "System event log", Hint = "BSOD, unexpected shutdown, driver and hardware errors (~15 s)", DefaultOn = true, Run = Jobs.SystemEvents });
             list.Add(new JobDef { Id = "events-app", Category = "Basics", Name = "Application event log", Hint = "App crashes and hangs (~10 s)", DefaultOn = true, Run = Jobs.AppEvents });
             list.Add(new JobDef { Id = "evtx-all", Category = "Basics", Name = "All event log files (.evtx)", Hint = "Mirrors winevt\\Logs incl. empty folders (~30 s as admin); ~2 min without", DefaultOn = true, Run = Jobs.AllEventLogs });
             list.Add(new JobDef { Id = "evtxcsv", Category = "Basics", Name = "Event logs as CSV (every channel)", Hint = "Converts every collected .evtx to CSV; up to 20 min, skips logs over 26 MB", DefaultOn = false, Run = Jobs.EventCsvAll });
-            list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info and hardware details", Hint = "Model, BIOS, CPU, memory, battery, problem devices (~15 s)", DefaultOn = true, Run = Jobs.SysInfo });
-            list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Drivers and devices", Hint = "Driver versions, signing, problem devices (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
-            list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Processes, services and startup", Hint = "Current runtime state (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
-            list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Patches and installed software", Hint = "Track environment changes (~5 s)", DefaultOn = true, Run = Jobs.Software });
+            list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info (systeminfo)", Hint = "Full systeminfo report (~10 s)", DefaultOn = true, Run = Jobs.SysInfo });
+            list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Driver store and problem devices", Hint = "Driver store listing + devices with a yellow mark (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
+            list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Running processes", Hint = "Every process running at collection time (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
+            list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Installed updates and software", Hint = "Track environment changes (~5 s)", DefaultOn = true, Run = Jobs.Software });
             list.Add(new JobDef { Id = "msinfo32", Category = "Basics", Name = "msinfo32 full report (slow)", Hint = "More detail, but may hang on some machines (off by default)", DefaultOn = false, Run = Jobs.Msinfo32 });
 
             list.Add(new JobDef { Id = "minidump", Category = "Crashes and dumps", Name = "Blue screen dumps (Minidump)", Hint = "Essential for BSOD (~3 s)", DefaultOn = true, Run = Jobs.MiniDump });
@@ -33,22 +33,21 @@ namespace LogCollector
             list.Add(new JobDef { Id = "memdump", Category = "Crashes and dumps", Name = "Full memory dump (MEMORY.DMP)", Hint = "Up to several GB; only if the system already created it", DefaultOn = false, Run = Jobs.MemDump });
             list.Add(new JobDef { Id = "pdump", Category = "Crashes and dumps", Name = "Process memory dump (GB, target process)", Hint = "For leaks/hangs; enter a process name on the right (~10-60 s)", DefaultOn = false, Run = Jobs.ProcessDump });
 
+            list.Add(new JobDef { Id = "panther", Category = "Setup and component logs", Name = "Windows setup logs (Panther)", Hint = "Mirrors C:\\Windows\\Panther; can be ~2 GB; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.PantherLogs });
+            list.Add(new JobDef { Id = "winlogs", Category = "Setup and component logs", Name = "Windows component logs", Hint = "Mirrors C:\\Windows\\Logs (CBS, DISM, WindowsUpdate, WinRE)", DefaultOn = true, Run = Jobs.WindowsLogs });
+            list.Add(new JobDef { Id = "inf", Category = "Setup and component logs", Name = "Driver INF and setup logs", Hint = "Mirrors C:\\Windows\\INF (setupapi.dev.log and friends)", DefaultOn = true, Run = Jobs.InfFolder });
+
             list.Add(new JobDef { Id = "battery", Category = "Power and battery", Name = "Battery health report", Hint = "Capacity, cycles, health (~5 s)", DefaultOn = true, Run = Jobs.Battery });
-            list.Add(new JobDef { Id = "powercfg", Category = "Power and battery", Name = "Power settings and wake sources", Hint = "Sleep, wake, sleep blockers (~5 s)", DefaultOn = true, Run = Jobs.PowerCfg });
+            list.Add(new JobDef { Id = "powercfg", Category = "Power and battery", Name = "Power settings", Hint = "Sleep and display timeouts, lid action (~5 s)", DefaultOn = true, Run = Jobs.PowerCfg });
             list.Add(new JobDef { Id = "energy", Category = "Power and battery", Name = "Energy report (60 s audit)", Hint = "Requires admin (~60 s)", DefaultOn = false, NeedAdmin = true, Run = Jobs.Energy });
             list.Add(new JobDef { Id = "sleepstudy", Category = "Power and battery", Name = "Sleep study + system power report", Hint = "powercfg /sleepstudy and /spr; requires admin (~60 s)", DefaultOn = true, NeedAdmin = true, Run = Jobs.SleepStudy });
 
             list.Add(new JobDef { Id = "perf", Category = "Performance", Name = "Performance sampling (30 s: CPU/memory/disk)", Hint = "~35 s; do not use the machine while sampling", DefaultOn = false, Run = Jobs.Perf });
-            list.Add(new JobDef { Id = "gpu", Category = "Performance", Name = "Graphics and display (dxdiag)", Hint = "Includes TDR records (~20 s)", DefaultOn = true, Run = Jobs.Gpu });
+            list.Add(new JobDef { Id = "gpu", Category = "Performance", Name = "DXDiag (graphics and display)", Hint = "Includes TDR records (~20 s)", DefaultOn = true, Run = Jobs.Gpu });
 
             list.Add(new JobDef { Id = "netcfg", Category = "Network", Name = "Network configuration snapshot", Hint = "IP, routes, Wi-Fi, Bluetooth (~5 s)", DefaultOn = true, Run = Jobs.NetCfg });
-            list.Add(new JobDef { Id = "wlan", Category = "Network", Name = "Wi-Fi connection history", Hint = "Connect/disconnect timeline; requires admin (~25 s)", DefaultOn = true, NeedAdmin = true, Run = Jobs.WlanReport });
 
             list.Add(new JobDef { Id = "disk", Category = "Storage", Name = "Disk and SMART health", Hint = "Health, temperature, power-on hours (~5 s)", DefaultOn = true, Run = Jobs.Disk });
-
-            list.Add(new JobDef { Id = "panther", Category = "Setup and component logs", Name = "Windows setup logs (Panther)", Hint = "Mirrors C:\\Windows\\Panther; can be ~2 GB; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.PantherLogs });
-            list.Add(new JobDef { Id = "winlogs", Category = "Setup and component logs", Name = "Windows component logs", Hint = "Mirrors C:\\Windows\\Logs (CBS, DISM, WindowsUpdate, WinRE)", DefaultOn = true, Run = Jobs.WindowsLogs });
-            list.Add(new JobDef { Id = "inf", Category = "Setup and component logs", Name = "Driver INF and setup logs", Hint = "Mirrors C:\\Windows\\INF (setupapi.dev.log and friends)", DefaultOn = true, Run = Jobs.InfFolder });
 
             list.Add(new JobDef { Id = "appdir", Category = "Other", Name = "Extra log folder (custom path)", Hint = "Logs of the application under test", DefaultOn = false, Run = Jobs.AppDir });
 
@@ -61,7 +60,7 @@ namespace LogCollector
         // ---------------- basics ----------------
         public static void SystemEvents(Session s)
         {
-            string dir = s.Dir("10_System_Logs");
+            string dir = s.Dir("1_System_Logs");
             s.Source(dir, @"C:\Windows\System32\winevt\Logs\System.evtx", "exported from the System channel with wevtutil");
             string o;
             Tool.Run("wevtutil.exe", "epl System " + Tool.Q(Path.Combine(dir, "System.evtx")), 180000, s.Token, out o, Encoding.Default);
@@ -87,7 +86,6 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
 }
 ";
             string outp = Tool.Ps(script, 180000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "key_events.csv"), outp, new UTF8Encoding(true));
             ParseEvents(outp, "System", s);
 
             ExportLogCsv(s, "System", dir, "System_events.csv", 30, null);
@@ -146,7 +144,7 @@ if($ev){
         /// <summary>把 winevt\Logs 下所有 .evtx 连目录结构（含空目录）整体镜像出来。</summary>
         public static void AllEventLogs(Session s)
         {
-            string dir = s.Dir("12_All_Event_Logs");
+            string dir = s.Dir("3_All_Event_Logs");
             string root = @"C:\Windows\System32\winevt\Logs";
             string dest = Path.Combine(dir, "Logs");
             if (!Directory.Exists(root)) throw new SkippedException("Event log folder not found: " + root);
@@ -218,8 +216,6 @@ if($ev){
                 }
             }
 
-            File.WriteAllText(Path.Combine(dir, "EventLog_Index.csv"), index.ToString(), new UTF8Encoding(true));
-
             if (fileCount == 0)
             {
                 int ch = ExportChannels(s, dir);
@@ -286,7 +282,6 @@ if($ev){
                     idx.AppendLine(Csv(channel) + ",,0,failed: " + CsvClean(err));
                 }
             }
-            File.WriteAllText(Path.Combine(dir, "Channel_Index.csv"), idx.ToString(), new UTF8Encoding(true));
             return ok;
         }
 
@@ -302,7 +297,7 @@ if($ev){
 
         public static void AppEvents(Session s)
         {
-            string dir = s.Dir("11_Application_Logs");
+            string dir = s.Dir("2_Application_Logs");
             s.Source(dir, @"C:\Windows\System32\winevt\Logs\Application.evtx", "exported from the Application channel with wevtutil");
             string o;
             Tool.Run("wevtutil.exe", "epl Application " + Tool.Q(Path.Combine(dir, "Application.evtx")), 180000, s.Token, out o, Encoding.Default);
@@ -325,7 +320,6 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
 }
 ";
             string outp = Tool.Ps(script, 180000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "app_crash_events.csv"), outp, new UTF8Encoding(true));
             ParseEvents(outp, "Application", s);
 
             ExportLogCsv(s, "Application", dir, "Application_events.csv", 30, null);
@@ -334,7 +328,7 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
 
         public static void SysInfo(Session s)
         {
-            string dir = s.Dir("20_System_Info");
+            string dir = s.Dir("4_System_Info");
             s.Source(dir, @"WMI/CIM + systeminfo + powercfg report parsers", "queried from the running system");
             string o;
             string sys = Path.Combine(dir, "systeminfo.txt");
@@ -399,14 +393,12 @@ E 'OS' 'Install' $os.InstallDate
 E 'OS' 'LastBoot' $os.LastBootUpTime
 ";
             string probeOut = Tool.Ps(probe, 120000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "hardware_info.csv"), probeOut, new UTF8Encoding(true));
             ParseProbe(probeOut, s);
-            File.WriteAllText(Path.Combine(dir, "system_summary.txt"), ProbeSummary(s), new UTF8Encoding(true));
         }
 
         public static void Msinfo32(Session s)
         {
-            string dir = s.Dir("24_msinfo32");
+            string dir = s.Dir("8_msinfo32");
             s.Source(dir, @"msinfo32.exe /report", "generated on this machine");
             string f = Path.Combine(dir, "msinfo32.txt");
             string o;
@@ -416,78 +408,44 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
                 throw new Exception("msinfo32 did not produce a file in time (it hangs on some machines); use another item instead");
         }
 
-        private static string ProbeSummary(Session s)
-        {
-            StringBuilder b = new StringBuilder();
-            string[][] groups = new string[][] {
-                new string[] { "SYS", "Computer" },
-                new string[] { "BIOS", "BIOS and serial" },
-                new string[] { "CPU", "Processor" },
-                new string[] { "MEM", "Memory" },
-                new string[] { "GPU", "Graphics" },
-                new string[] { "DISK", "Disk" },
-                new string[] { "BAT", "Battery" },
-                new string[] { "PNP", "Problem devices" },
-                new string[] { "OS", "Operating system" }
-            };
-            foreach (string[] g in groups)
-            {
-                List<string> lines = new List<string>();
-                foreach (KeyValuePair<string, string> kv in s.Probe)
-                {
-                    if (kv.Key.StartsWith(g[0] + "."))
-                        lines.Add("  " + kv.Key.Substring(g[0].Length + 1) + " : " + kv.Value);
-                }
-                if (lines.Count > 0)
-                {
-                    b.AppendLine("=== " + g[1] + " ===");
-                    foreach (string l in lines) b.AppendLine(l);
-                    b.AppendLine();
-                }
-            }
-            b.AppendLine("=== Collection context ===");
-            b.AppendLine("  Computer name : " + s.Info.ComputerName);
-            b.AppendLine("  User : " + s.Info.CurrentUser);
-            b.AppendLine("  Privilege : " + (s.IsAdmin ? "Administrator" : "Standard user"));
-            b.AppendLine("  Booted at : " + s.Info.BootTime + " (up " + s.Info.Uptime + ")");
-            return b.ToString();
-        }
-
         public static void Drivers(Session s)
         {
-            string dir = s.Dir("21_Drivers_Devices");
-            s.Source(dir, @"driverquery /v   +   pnputil /enum-drivers", "queried from the running system");
+            string dir = s.Dir("5_Drivers_Devices");
+            s.Source(dir, @"pnputil /enum-drivers   +   Win32_PnPEntity problem devices", "queried from the running system");
             string o;
-            Tool.Run("cmd.exe", "/c driverquery /v /fo csv > " + Tool.Q(Path.Combine(dir, "drivers.csv")),
-                     120000, s.Token, out o, Encoding.Default);
             Tool.Run("cmd.exe", "/c pnputil /enum-drivers > " + Tool.Q(Path.Combine(dir, "driver_store.txt")),
                      120000, s.Token, out o, Encoding.Default);
-            string ps = @"Get-PnpDevice | Where-Object { $_.Status -ne 'OK' } | Select-Object Status,Class,FriendlyName,InstanceId | Format-Table -AutoSize | Out-String -Width 300";
+
+            string ps = @"
+[System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
+$dev = @(Get-CimInstance Win32_PnPEntity | Where-Object { $_.ConfigManagerErrorCode -ne 0 -and $_.ConfigManagerErrorCode -ne 22 })
+if ($dev.Count -eq 0) {
+  Write-Output 'No device has a problem code (no yellow mark in Device Manager).'
+} else {
+  $dev | Select-Object @{n='ErrorCode';e={$_.ConfigManagerErrorCode}},Status,Class,@{n='Device';e={$_.Name}},DeviceID |
+    Sort-Object ErrorCode | Format-Table -AutoSize | Out-String -Width 400
+}
+";
             string outp = Tool.Ps(ps, 90000, s.Token);
             File.WriteAllText(Path.Combine(dir, "problem_devices.txt"), outp, new UTF8Encoding(true));
         }
 
         public static void Snapshot(Session s)
         {
-            string dir = s.Dir("22_Runtime_Snapshot");
-            s.Source(dir, @"Get-Process / Get-Service / startup items / scheduled tasks", "queried from the running system");
+            string dir = s.Dir("6_Runtime_Snapshot");
+            s.Source(dir, @"Get-Process (all running processes)", "queried from the running system");
             string ps = @"
-'=== Top 30 processes by memory ==='
-Get-Process | Sort-Object WS -Descending | Select-Object -First 30 Name,Id,@{n='CPU_s';e={[math]::Round($_.CPU,1)}},@{n='MemMB';e={[math]::Round($_.WS/1MB,0)}},Handles,Threads | Format-Table -AutoSize | Out-String -Width 300
-'=== Services not running ==='
-Get-Service | Where-Object { $_.Status -ne 'Running' } | Select-Object Status,StartType,Name,DisplayName | Format-Table -AutoSize | Out-String -Width 300
-'=== Startup items ==='
-Get-CimInstance Win32_StartupCommand | Select-Object Name,Command,Location | Format-Table -AutoSize | Out-String -Width 300
-'=== Scheduled tasks (non-Microsoft) ==='
-Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Select-Object TaskName,State | Format-Table -AutoSize | Out-String -Width 300
+[System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
+'=== Running processes ==='
+Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={[math]::Round($_.CPU,1)}},@{n='MemMB';e={[math]::Round($_.WS/1MB,0)}},Handles,@{n='Threads';e={$_.Threads.Count}} | Format-Table -AutoSize | Out-String -Width 300
 ";
             string outp = Tool.Ps(ps, 120000, s.Token);
-            File.WriteAllText(Path.Combine(dir, "processes_services_startup.txt"), outp, new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "running_processes.txt"), outp, new UTF8Encoding(true));
         }
 
         public static void Software(Session s)
         {
-            string dir = s.Dir("23_Patches_Software");
+            string dir = s.Dir("7_Installed_Updates_and_Software");
             s.Source(dir, @"Get-HotFix + HKLM uninstall registry keys", "queried from the running system");
             StringBuilder sb = new StringBuilder();
             sb.AppendLine("=== Installed updates ===");
@@ -496,7 +454,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             sb.AppendLine();
             sb.AppendLine("=== Installed software ===");
             sb.AppendLine(ReadInstalledApps());
-            File.WriteAllText(Path.Combine(dir, "patches_and_software.txt"), sb.ToString(), new UTF8Encoding(true));
+            File.WriteAllText(Path.Combine(dir, "installed_updates_and_software.txt"), sb.ToString(), new UTF8Encoding(true));
         }
 
         private static string ReadInstalledApps()
@@ -543,7 +501,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         // ---------------- crashes ----------------
         public static void MiniDump(Session s)
         {
-            string dir = s.Dir("30_Crash_Dumps");
+            string dir = s.Dir("9_Crash_Dumps");
             s.Source(dir, @"C:\Windows\Minidump", "copied as-is");
             string src = @"C:\Windows\Minidump";
             int n = 0;
@@ -601,7 +559,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
             if (n == 0)
             {
                 string reason = skipped.Count > 0
-                    ? "Dump file too large or copy failed; see 30_Crash_Dumps\\skipped_large_files.txt"
+                    ? "Dump file too large or copy failed; see 9_Crash_Dumps\\skipped_large_files.txt"
                     : "No blue screen dump on this system (" + DumpModeName() + ", no BSOD in the last 30 days)";
                 if (skipped.Count == 0) WriteNothing(dir, "No minidump files were found.\r\n\r\n" + DumpPolicy());
                 s.Log("  · No dump file copied");
@@ -709,7 +667,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
 
         public static void MemDump(Session s)
         {
-            string dir = s.Dir("32_Memory_Dump");
+            string dir = s.Dir("12_Memory_Dump");
             s.Source(dir, @"C:\Windows\MEMORY.DMP", "copied as-is");
             string src = @"C:\Windows\MEMORY.DMP";
             if (!File.Exists(src))
@@ -717,7 +675,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                 WriteNothing(dir, "No MEMORY.DMP found on this system.\r\n\r\n" + DumpPolicy());
                 s.Log("  · No MEMORY.DMP (" + DumpModeName() + "）");
                 throw new SkippedException("MEMORY.DMP does not exist: " + DumpModeName()
-                    + "; see 32_Memory_Dump\\README.txt for details");
+                    + "; see 11_Memory_Dump\\README.txt for details");
             }
             FileInfo fi = new FileInfo(src);
             if (fi.Length > 12L * 1024 * 1024 * 1024)
@@ -736,7 +694,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         /// <summary>Full memory dump of a process (GB sized) for leaks, hangs and freezes.</summary>
         public static void ProcessDump(Session s)
         {
-            string dir = s.Dir("33_Process_Dump");
+            string dir = s.Dir("13_Process_Dump");
             s.Source(dir, @"live process memory (MiniDumpWriteDump)", "dumped from the running process");
             string name = (s.ProcessName ?? "").Trim();
             if (name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
@@ -806,7 +764,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
 
         public static void Wer(Session s)
         {
-            string dir = s.Dir("31_WER_Reports");
+            string dir = s.Dir("10_WER_Reports");
             string root = @"C:\ProgramData\Microsoft\Windows\WER";
             s.Source(dir, root, "full folder mirror, structure and empty folders preserved (needs admin)");
             if (!Directory.Exists(root)) throw new SkippedException("WER folder not found: " + root);
@@ -832,7 +790,7 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
         /// <summary>LiveKernelReports（无蓝屏的 GPU 挂起/超时等）整目录镜像。</summary>
         public static void LiveKernel(Session s)
         {
-            string dir = s.Dir("34_LiveKernel_Reports");
+            string dir = s.Dir("11_LiveKernel_Reports");
             string root = @"C:\Windows\LiveKernelReports";
             s.Source(dir, root, "full folder mirror, structure and empty folders preserved (needs admin)");
             if (!Directory.Exists(root)) throw new SkippedException("Live kernel report folder not found: " + root);
@@ -847,10 +805,10 @@ Get-ScheduledTask | Where-Object { $_.TaskPath -notlike '\Microsoft\*' } | Selec
                   + (failed > 0 ? ", " + failed + " failed" : ""));
         }
 
-        /// <summary>把 12_All_Event_Logs 下已经采到的每个 .evtx 转成同名 .csv（完整内容）。</summary>
+        /// <summary>把 3_All_Event_Logs 下已经采到的每个 .evtx 转成同名 .csv（完整内容）。</summary>
         public static void EventCsvAll(Session s)
         {
-            string dir = s.Dir("12_All_Event_Logs");
+            string dir = s.Dir("3_All_Event_Logs");
             string src = Path.Combine(dir, "Logs");
             if (!Directory.Exists(src)) src = Path.Combine(dir, "Channels");
             if (!Directory.Exists(src)) throw new SkippedException("No .evtx found - run 'All event log files (.evtx)' first");
@@ -934,21 +892,21 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
         /// <summary>C:\Windows\Panther —— 安装/迁移日志（setupact.log 可能有 1 GB）。</summary>
         public static void PantherLogs(Session s)
         {
-            MirrorJob(s, "35_Setup_Panther", @"C:\Windows\Panther",
+            MirrorJob(s, "14_Setup_Panther", @"C:\Windows\Panther",
                       "full folder mirror, structure and empty folders preserved (needs admin)", 2560L * 1024 * 1024);
         }
 
         /// <summary>C:\Windows\Logs —— CBS / DISM / WindowsUpdate 等组件日志。</summary>
         public static void WindowsLogs(Session s)
         {
-            MirrorJob(s, "36_Windows_Logs", @"C:\Windows\Logs",
+            MirrorJob(s, "15_Windows_Logs", @"C:\Windows\Logs",
                       "full folder mirror, structure and empty folders preserved", 2048L * 1024 * 1024);
         }
 
         /// <summary>C:\Windows\INF —— 驱动 INF 与 setupapi 设备安装日志。</summary>
         public static void InfFolder(Session s)
         {
-            MirrorJob(s, "37_Inf_Drivers", @"C:\Windows\INF",
+            MirrorJob(s, "16_Inf_Drivers", @"C:\Windows\INF",
                       "full folder mirror, structure and empty folders preserved", 1024L * 1024 * 1024);
         }
 
@@ -1025,7 +983,7 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
         // ---------------- power ----------------
         public static void Battery(Session s)
         {
-            string dir = s.Dir("40_Battery");
+            string dir = s.Dir("17_Battery");
             s.Source(dir, @"powercfg /batteryreport", "generated on this machine");
             string o;
             string f = Path.Combine(dir, "battery_report.html");
@@ -1056,27 +1014,8 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
 
         public static void PowerCfg(Session s)
         {
-            string dir = s.Dir("41_Power_Settings");
+            string dir = s.Dir("18_Power_Settings");
             s.Source(dir, @"powercfg /qh, /a, /getactivescheme, /requests, /lastwake, /waketimers", "queried from the running system");
-            StringBuilder sb = new StringBuilder();
-            string[][] cmds = new string[][] {
-                new string[] { "Available sleep states", "/a" },
-                new string[] { "Active power scheme", "/getactivescheme" },
-                new string[] { "Sleep blockers", "/requests" },
-                new string[] { "Last wake source", "/lastwake" },
-                new string[] { "Wake timers", "/waketimers" },
-                new string[] { "Wake-capable devices", "/devicequery wake_armed" }
-            };
-            foreach (string[] c in cmds)
-            {
-                if (s.Token.IsCancellationRequested) return;
-                string outp;
-                Tool.Run("powercfg.exe", c[1], 60000, s.Token, out outp, Encoding.Default);
-                sb.AppendLine("=== " + c[0] + "（powercfg " + c[1] + "）===");
-                sb.AppendLine(outp);
-                sb.AppendLine();
-            }
-            File.WriteAllText(Path.Combine(dir, "power_wake.txt"), sb.ToString(), new UTF8Encoding(true));
             CollectPowerSettings(s, dir);
         }
 
@@ -1101,9 +1040,6 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
             sb.AppendLine(Pad("Item", 44) + Pad("AC", 22) + Pad("DC", 22) + "Raw");
             sb.AppendLine(new string('-', 92));
 
-            StringBuilder csv = new StringBuilder();
-            csv.AppendLine("Item,AC,DC,AC_raw,DC_raw");
-
             foreach (string[] item in PowerItems)
             {
                 if (s.Token.IsCancellationRequested) return;
@@ -1121,7 +1057,6 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
                 s.Probe["PWR." + key + "_dcraw"] = dc.ToString();
 
                 sb.AppendLine(Pad(name, 44) + Pad(sa, 22) + Pad(sd, 22) + ac + "/" + dc);
-                csv.AppendLine(name + "," + sa + "," + sd + "," + ac + "," + dc);
             }
 
             sb.AppendLine();
@@ -1129,7 +1064,6 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
             sb.AppendLine("Actions: 0=do nothing, 1=sleep, 2=hibernate, 3=shut down, 4=display off; boolean: 0=off, 1=on.");
 
             File.WriteAllText(Path.Combine(dir, "power_settings.txt"), sb.ToString(), new UTF8Encoding(true));
-            File.WriteAllText(Path.Combine(dir, "power_settings.csv"), csv.ToString(), new UTF8Encoding(true));
 
             StringBuilder sum = new StringBuilder();
             sum.AppendLine("=== Power and sleep timeouts (active scheme) ===");
@@ -1192,7 +1126,7 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
 
         public static void Energy(Session s)
         {
-            string dir = s.Dir("42_Energy_Report");
+            string dir = s.Dir("19_Energy_Report");
             s.Source(dir, @"powercfg /energy /duration 60", "generated on this machine");
             string f = Path.Combine(dir, "energy_report.html");
             string o;
@@ -1204,7 +1138,7 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
 
         public static void SleepStudy(Session s)
         {
-            string dir = s.Dir("43_Sleep_Study");
+            string dir = s.Dir("20_Sleep_Study");
             s.Source(dir, @"powercfg /sleepstudy  +  powercfg /spr  ->  C:\Windows\System32\sleepstudy-report.html",
                      "reports generated on this machine (needs administrator)");
             string f = Path.Combine(dir, "sleep_study.html");
@@ -1236,7 +1170,7 @@ Get-ChildItem -LiteralPath $dst -Filter *.csv -Recurse -ErrorAction SilentlyCont
         // ---------------- performance ----------------
         public static void Perf(Session s)
         {
-            string dir = s.Dir("50_Performance");
+            string dir = s.Dir("21_Performance");
             s.Source(dir, @"performance counters (Win32_PerfFormattedData)", "sampled for 20 seconds");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
@@ -1264,7 +1198,7 @@ for($i=0; $i -lt 20; $i++){
 
         public static void Gpu(Session s)
         {
-            string dir = s.Dir("60_Display_GPU");
+            string dir = s.Dir("22_DXDiag");
             s.Source(dir, @"dxdiag /t", "generated on this machine");
             string f = Path.Combine(dir, "dxdiag.txt");
             string o;
@@ -1276,7 +1210,7 @@ for($i=0; $i -lt 20; $i++){
         // ---------------- network ----------------
         public static void NetCfg(Session s)
         {
-            string dir = s.Dir("70_Network");
+            string dir = s.Dir("23_Network");
             s.Source(dir, @"ipconfig /all, route print, arp -a, netsh wlan / int tcp", "queried from the running system");
             StringBuilder sb = new StringBuilder();
             string[][] cmds = new string[][] {
@@ -1300,33 +1234,10 @@ for($i=0; $i -lt 20; $i++){
             File.WriteAllText(Path.Combine(dir, "network_config.txt"), sb.ToString(), new UTF8Encoding(true));
         }
 
-        public static void WlanReport(Session s)
-        {
-            string dir = s.Dir("71_WLAN_Report");
-            s.Source(dir, @"netsh wlan show wlanreport -> C:\ProgramData\Microsoft\Windows\WlanReport", "generated on this machine");
-            string o;
-            Tool.Run("netsh.exe", "wlan show wlanreport", 120000, s.Token, out o, Encoding.Default);
-            string src = @"C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.html";
-            WaitFile(src, 30000, s.Token);
-            if (File.Exists(src))
-            {
-                File.Copy(src, Path.Combine(dir, "wlan_history.html"), true);
-                string side = @"C:\ProgramData\Microsoft\Windows\WlanReport\wlan-report-latest.xml";
-                if (File.Exists(side))
-                {
-                    try { File.Copy(side, Path.Combine(dir, "wlan_history.xml"), true); } catch { }
-                }
-            }
-            else
-            {
-                WriteNothing(dir, "Wi-Fi history report failed (no wireless adapter, or admin required).");
-            }
-        }
-
         // ---------------- storage ----------------
         public static void Disk(Session s)
         {
-            string dir = s.Dir("80_Storage");
+            string dir = s.Dir("24_Storage");
             s.Source(dir, @"Get-PhysicalDisk / Get-Volume / Get-StorageReliabilityCounter", "queried from the running system");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture
@@ -1356,7 +1267,7 @@ Get-Disk | Select-Object Number,FriendlyName,PartitionStyle,@{n='SizeGB';e={[mat
         {
             if (string.IsNullOrEmpty(s.AppDir) || !Directory.Exists(s.AppDir))
                 throw new Exception("No valid extra log folder specified");
-            string dir = s.Dir("90_App_Logs");
+            string dir = s.Dir("25_App_Logs");
             s.Source(dir, s.AppDir, "copied from the folder entered in the UI");
             long bytes = CopyTree(s.AppDir, Path.Combine(dir, new DirectoryInfo(s.AppDir).Name), 1500L * 1024 * 1024);
             if (bytes == 0) WriteNothing(dir, "Target folder is empty or unreadable: " + s.AppDir);

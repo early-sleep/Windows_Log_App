@@ -6,7 +6,7 @@ using System.Text;
 namespace LogCollector
 {
     /// <summary>
-    /// Renders collected text files as HTML: one browse.html per folder, one All_Content.html at the root.
+    /// Renders all collected text files into one All_Content.html at the package root.
     /// For human reading only; does not replace the raw txt files.
     /// </summary>
     public static class HtmlPreview
@@ -35,29 +35,8 @@ namespace LogCollector
             catch { }
             dirs.Sort(StringComparer.OrdinalIgnoreCase);
 
-            foreach (string d in dirs)
-            {
-                if (s.Token.IsCancellationRequested) return;
-                try { WriteFolderPage(d); } catch { }
-            }
+            if (s.Token.IsCancellationRequested) return;
             try { WriteAllPage(s, dirs); } catch { }
-        }
-
-        // ---------------------------------------------------------------- single folder
-        private static void WriteFolderPage(string dir)
-        {
-            List<FileInfo> files = Collect(dir);
-            if (files.Count == 0) return;
-
-            StringBuilder b = new StringBuilder();
-            Head(b, Path.GetFileName(dir), "../All_Content.html", "Back to overview");
-            b.Append("<div class=\"hd\"><h1>").Append(E(Path.GetFileName(dir))).Append("</h1>");
-            b.Append("<div class=\"sub\">").Append(files.Count).Append(" files, ")
-             .Append(E(Tool.FmtSize(Sum(files)))).Append("</div></div>");
-            foreach (FileInfo f in files) Section(b, f);
-            Foot(b);
-
-            File.WriteAllText(Path.Combine(dir, "browse.html"), b.ToString(), new UTF8Encoding(false));
         }
 
         // ---------------------------------------------------------------- everything
@@ -68,8 +47,8 @@ namespace LogCollector
 
             b.Append("<div class=\"layout\"><nav><div class=\"navt\">Contents</div><ul>");
             b.Append("<li><a href=\"report.html\">◂ Back to report</a></li>");
-            if (File.Exists(Path.Combine(s.OutDir, "10_System_Logs", "System.evtx")))
-                b.Append("<li><a href=\"10_System_Logs/System.evtx\">System.evtx</a></li>");
+            if (File.Exists(Path.Combine(s.OutDir, "1_System_Logs", "System.evtx")))
+                b.Append("<li><a href=\"1_System_Logs/System.evtx\">System.evtx</a></li>");
             List<string> names = new List<string>();
             foreach (string d in dirs)
             {
@@ -95,7 +74,6 @@ namespace LogCollector
                 b.Append("<section id=\"d").Append(idx).Append("\"><h2>").Append(E(n));
                 b.Append("<span class=\"cnt\">").Append(fs.Count).Append(" files / ")
                  .Append(E(Tool.FmtSize(Sum(fs)))).Append("</span>");
-                b.Append("<a class=\"lnk\" href=\"").Append(Uri.EscapeDataString(n)).Append("/browse.html\">Open alone</a>");
                 b.Append("</h2>");
                 foreach (FileInfo f in fs) Section(b, f);
                 b.Append("</section>");
@@ -120,7 +98,6 @@ namespace LogCollector
                     {
                         FileInfo fi = new FileInfo(f);
                         if (fi.Length > MaxFile) continue;
-                        if (string.Equals(fi.Name, "browse.html", StringComparison.OrdinalIgnoreCase)) continue;
                         list.Add(fi);
                     }
                     catch { }

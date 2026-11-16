@@ -14,34 +14,44 @@ namespace LogCollector
         private static Dictionary<string, string> BuildDirs()
         {
             Dictionary<string, string> d = new Dictionary<string, string>();
-            d["events-system"] = "10_System_Logs";
-            d["events-app"] = "11_Application_Logs";
-            d["evtx-all"] = "12_All_Event_Logs";
-            d["evtxcsv"] = "12_All_Event_Logs";
-            d["sysinfo"] = "20_System_Info";
-            d["drivers"] = "21_Drivers_Devices";
-            d["snapshot"] = "22_Runtime_Snapshot";
-            d["software"] = "23_Patches_Software";
-            d["msinfo32"] = "24_msinfo32";
-            d["minidump"] = "30_Crash_Dumps";
-            d["wer"] = "31_WER_Reports";
-            d["livekernel"] = "34_LiveKernel_Reports";
-            d["memdump"] = "32_Memory_Dump";
-            d["pdump"] = "33_Process_Dump";
-            d["battery"] = "40_Battery";
-            d["powercfg"] = "41_Power_Settings";
-            d["energy"] = "42_Energy_Report";
-            d["sleepstudy"] = "43_Sleep_Study";
-            d["perf"] = "50_Performance";
-            d["gpu"] = "60_Display_GPU";
-            d["netcfg"] = "70_Network";
-            d["wlan"] = "71_WLAN_Report";
-            d["disk"] = "80_Storage";
-            d["panther"] = "35_Setup_Panther";
-            d["winlogs"] = "36_Windows_Logs";
-            d["inf"] = "37_Inf_Drivers";
-            d["appdir"] = "90_App_Logs";
+            d["events-system"] = "1_System_Logs";
+            d["events-app"] = "2_Application_Logs";
+            d["evtx-all"] = "3_All_Event_Logs";
+            d["evtxcsv"] = "3_All_Event_Logs";
+            d["sysinfo"] = "4_System_Info";
+            d["drivers"] = "5_Drivers_Devices";
+            d["snapshot"] = "6_Runtime_Snapshot";
+            d["software"] = "7_Installed_Updates_and_Software";
+            d["msinfo32"] = "8_msinfo32";
+            d["minidump"] = "9_Crash_Dumps";
+            d["wer"] = "10_WER_Reports";
+            d["memdump"] = "12_Memory_Dump";
+            d["pdump"] = "13_Process_Dump";
+            d["livekernel"] = "11_LiveKernel_Reports";
+            d["panther"] = "14_Setup_Panther";
+            d["winlogs"] = "15_Windows_Logs";
+            d["inf"] = "16_Inf_Drivers";
+            d["battery"] = "17_Battery";
+            d["powercfg"] = "18_Power_Settings";
+            d["energy"] = "19_Energy_Report";
+            d["sleepstudy"] = "20_Sleep_Study";
+            d["perf"] = "21_Performance";
+            d["gpu"] = "22_DXDiag";
+            d["netcfg"] = "23_Network";
+            d["disk"] = "24_Storage";
+            d["appdir"] = "25_App_Logs";
             return d;
+        }
+
+        /// <summary>任务对应的目录序号，界面上显示的数字和输出目录前缀保持一致。</summary>
+        public static int NumOf(string jobId)
+        {
+            string dir;
+            if (jobId == null || !JobDirs.TryGetValue(jobId, out dir)) return 0;
+            int cut = dir.IndexOf('_');
+            int n;
+            if (cut > 0 && int.TryParse(dir.Substring(0, cut), out n)) return n;
+            return 0;
         }
 
         public static string SafeName(string s)
@@ -196,18 +206,19 @@ namespace LogCollector
             b.AppendLine("How to read");
             b.AppendLine("----------------------------------------");
             b.AppendLine("1. Open report.html first: Key findings, Power and sleep settings, Event timeline;");
-            b.AppendLine("2. For all text content open All_Content.html (each folder also has browse.html);");
-            b.AppendLine("3. BSOD: open the .dmp file under 30_Crash_Dumps with WinDbg;");
-            b.AppendLine("4. Event logs: double-click 10_System_Logs/System.evtx to open it in Event Viewer;");
-            b.AppendLine("5. Battery: open 40_Battery/battery_report.html;");
-            b.AppendLine("6. Power settings: see 41_Power_Settings/power_settings.txt (sleep/hibernate/display timeouts, lid action).");
+            b.AppendLine("2. For all text content open All_Content.html;");
+            b.AppendLine("3. BSOD: open the .dmp file under 9_Crash_Dumps with WinDbg;");
+            b.AppendLine("4. Event logs: double-click 1_System_Logs/System.evtx to open it in Event Viewer,");
+            b.AppendLine("   or read 1_System_Logs/System_events.csv for every event with the full message;");
+            b.AppendLine("5. Battery: open 17_Battery/battery_report.html;");
+            b.AppendLine("6. Power settings: see 18_Power_Settings/power_settings.txt (sleep/hibernate/display timeouts, lid action).");
             return b.ToString();
         }
     }
 
     static class Program
     {
-        public const string Version = "1.9";
+        public const string Version = "2.0";
 
         [STAThread]
         static int Main(string[] args)

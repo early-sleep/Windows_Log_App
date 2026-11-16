@@ -172,10 +172,16 @@ namespace LogCollector
                 gb.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
                 int iy = 22;
+                Dictionary<int, int> seenNum = new Dictionary<int, int>();
                 foreach (JobDef d in items)
                 {
+                    int num = Runner.NumOf(d.Id);
+                    int dup = 0;
+                    if (seenNum.ContainsKey(num)) dup = ++seenNum[num]; else seenNum[num] = 0;
+                    string numTxt = num <= 0 ? "" : (num + (dup == 0 ? "" : ((char)('a' + dup)).ToString()));
+
                     CheckBox cb = new CheckBox();
-                    cb.Text = d.Name;
+                    cb.Text = Width2(numTxt) + "  " + d.Name;
                     cb.Checked = d.DefaultOn;
                     cb.AutoSize = true;
                     cb.Font = new Font("Microsoft YaHei UI", 9F);
@@ -426,6 +432,12 @@ namespace LogCollector
             box.BorderStyle = BorderStyle.FixedSingle;
             p.Controls.Add(box);
             return y + 52;
+        }
+
+        /// <summary>把序号补成两位并加点，勾选列表里名字能对齐。</summary>
+        private static string Width2(string n)
+        {
+            return string.IsNullOrEmpty(n) ? "   " : n.PadLeft(2, ' ') + ".";
         }
 
         private Button MakeButton(string text, Color back, Color fore)

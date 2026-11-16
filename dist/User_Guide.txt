@@ -1,4 +1,4 @@
-Laptop Log Collector  v2.1
+Laptop Log Collector  v2.2
 ======================================================================
 
 1. What this is
@@ -21,7 +21,8 @@ The interface and all generated reports are in English.
 3. Three steps
 ----------------------------------------------------------------------
 1) Double-click LogCollector.exe
-2) Type the name of the collector in "Collected by" at the top
+2) Type the name of the collector in "Collected by *" at the top -
+   it is required: "Start collection" stays disabled until it is filled in
 3) Tick what to collect (the common set is already ticked)
 4) Optionally change the output folder: type a path, or press "Browse..."
    to pick one (the default is Desktop\LogCollection)

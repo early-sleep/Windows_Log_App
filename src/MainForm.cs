@@ -144,7 +144,7 @@ namespace LogCollector
             bDef.Location = new Point(152, 0); bDef.Size = new Size(82, 26);
             bDef.Click += delegate { ResetDefault(); };
             Label who = new Label();
-            who.Text = "Collected by:";
+            who.Text = "Collected by *";
             who.AutoSize = true;
             who.ForeColor = Color.FromArgb(71, 85, 105);
             who.Location = new Point(248, 6);
@@ -154,11 +154,15 @@ namespace LogCollector
             quick.Controls.Add(who);
 
             _txtOperator = new TextBox();
-            _txtOperator.Location = new Point(330, 3);
-            _txtOperator.Size = new Size(210, 24);
+            _txtOperator.Location = new Point(342, 3);
+            _txtOperator.Size = new Size(240, 24);
             _txtOperator.BorderStyle = BorderStyle.FixedSingle;
             _txtOperator.BackColor = Color.White;
-            _txtOperator.Text = Environment.UserName;
+            _txtOperator.HandleCreated += delegate
+            {
+                // 空框里显示灰色提示文字（Windows 原生的 cue banner）
+                SendMessage(_txtOperator.Handle, EM_SETCUEBANNER, (IntPtr)1, "Enter collector name");
+            };
             quick.Controls.Add(_txtOperator);
             left.Controls.Add(quick);
             y = 36;
@@ -284,6 +288,12 @@ namespace LogCollector
             _btnStart.Size = new Size(120, 34);
             _btnStart.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _btnStart.Click += delegate { StartCollect(); };
+            _txtOperator.TextChanged += delegate
+            {
+                if (_running) return;
+                EnableButton(_btnStart, _txtOperator.Text.Trim().Length > 0, Accent);
+            };
+            EnableButton(_btnStart, _txtOperator.Text.Trim().Length > 0, Accent);
             bottom.Controls.Add(_btnStart);
 
             _btnStop = MakeButton("Stop", Color.FromArgb(220, 38, 38), Color.White);
@@ -353,6 +363,11 @@ namespace LogCollector
             LayoutBottom();
             UpdateAdminState();
         }
+
+        private const int EM_SETCUEBANNER = 0x1501;
+
+        [System.Runtime.InteropServices.DllImport("user32.dll", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
+        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, string lParam);
 
         private void EnableButton(Button b, bool on, Color onColor)
         {
@@ -522,6 +537,16 @@ namespace LogCollector
         private void StartCollect()
         {
             if (_running) return;
+
+            string who = _txtOperator.Text.Trim();
+            if (who.Length == 0)
+            {
+                MessageBox.Show(this, "Please enter the collector's name before collecting.",
+                                "Collector name required", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                _txtOperator.Focus();
+                return;
+            }
+
             List<JobDef> picked = new List<JobDef>();
             foreach (JobDef d in _defs)
             {
@@ -573,7 +598,7 @@ namespace LogCollector
                 SetStatus("Reading serial number...");
                 try { s.Info.Serial = Tool.FetchSerial(CancellationToken.None).Trim(); } catch { }
             }
-            s.OperatorName = string.IsNullOrEmpty(_txtOperator.Text.Trim()) ? Environment.UserName : _txtOperator.Text.Trim();
+            s.OperatorName = who;
             s.CaseId = _txtCase.Text.Trim();
             s.Symptom = _txtSymptom.Text.Trim();
 

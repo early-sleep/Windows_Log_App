@@ -17,6 +17,7 @@ Every release gets its own branch; `main` always tracks the latest development s
 | Branch | Version | Notes |
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
+| `v3.0` | v3.0 | the log analyser is built in: the right half of the window lists the package, previews files and asks an AI model to analyse the ticked logs |
 | `v2.1` | v2.1 | collector name field in the top bar written to `Collected_By.txt`; CSV-per-channel, process dump, energy report, performance sampling and extra-folder items removed; folders renumbered 1-21 |
 | `v2.0` | v2.0 | folders renumbered from 1, WLAN report and per-folder browse/SOURCE files removed, trimmed items (systeminfo only, driver store + yellow-mark devices, all running processes, power settings only), DXDiag, "Installed updates and software"; the same number is shown in front of every item in the UI |
 | `v1.8` | v1.8 | added Log Analyzer: local web UI to browse a package and have AI analyse selected logs |
@@ -55,6 +56,8 @@ Each run creates `<serial>_<timestamp>/` containing:
 
 - `report.html` — key findings, event timeline, hardware, battery and power settings
 - `All_Content.html` — every text file in one browsable page (sidebar + collapsible blocks)
+
+AI settings live in `%APPDATA%\BsodAnalyzer\settings.json` (the API key is DPAPI-encrypted).
 - `Collection_Info.txt` — what was collected, status and how to read it
 - `Collected_By.txt` — collector name, package, machine and start time
 - Raw logs: `System.evtx`, `Application.evtx`, `*.dmp`, CSV/TXT exports
@@ -74,8 +77,8 @@ No Visual Studio required — the .NET Framework compiler shipped with Windows i
 
 Output goes to `build\LogCollector.exe`.
 
-The log analyser is a separate application in its own repository:
-https://github.com/early-sleep/BSOD_analyse
+The log analyser is built into the collector (right half of the window). The standalone
+version is still available at https://github.com/early-sleep/BSOD_analyse
 
 ## Command line
 

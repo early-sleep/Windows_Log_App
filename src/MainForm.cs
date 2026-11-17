@@ -18,7 +18,8 @@ namespace LogCollector
 
         private Dictionary<string, CheckBox> _checks = new Dictionary<string, CheckBox>();
         private List<JobDef> _defs;
-        private TextBox _txtCase, _txtOperator, _txtSymptom, _txtOut;
+        private TextBox _txtOperator, _txtOut;
+        private AnalyzerPanel _analyzer;
         private RichTextBox _log;
         private ProgressBar _bar;
         private Label _lblStatus, _lblMachine, _lblAdmin;
@@ -33,14 +34,20 @@ namespace LogCollector
             _defs = Catalog.All();
             BuildUi();
             LoadMachineInfo();
+            try
+            {
+                string def = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "LogCollection");
+                if (_analyzer != null) _analyzer.SetRoot(def);
+            }
+            catch { }
         }
 
         // ------------------------------------------------------------ UI
         private void BuildUi()
         {
             Text = "Laptop Log Collector  v" + Program.Version;
-            Size = new Size(1080, 800);
-            MinimumSize = new Size(980, 700);
+            Size = new Size(1450, 890);
+            MinimumSize = new Size(1200, 740);
             StartPosition = FormStartPosition.CenterScreen;
             BackColor = Bg;
             Font = new Font("Microsoft YaHei UI", 9F);
@@ -52,7 +59,7 @@ namespace LogCollector
             root.RowCount = 3;
             root.RowStyles.Add(new RowStyle(SizeType.Absolute, 78));
             root.RowStyles.Add(new RowStyle(SizeType.Percent, 100));
-            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 240));
+            root.RowStyles.Add(new RowStyle(SizeType.Absolute, 190));
             root.BackColor = Bg;
 
             // ---------- header ----------
@@ -117,7 +124,7 @@ namespace LogCollector
             mid.Dock = DockStyle.Fill;
             mid.ColumnCount = 2;
             mid.RowCount = 1;
-            mid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 646));
+            mid.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 610));
             mid.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
             mid.Padding = new Padding(14, 12, 14, 8);
             mid.BackColor = Bg;
@@ -217,52 +224,13 @@ namespace LogCollector
                 y += gb.Height + 10;
             }
 
-            Panel right = new Panel();
-            right.Dock = DockStyle.Fill;
-            right.BackColor = Color.White;
-            right.Padding = new Padding(16, 12, 16, 12);
-            right.AutoScroll = true;
-            _scrollPanels.Add(right);
-
-            Label rt = new Label();
-            rt.Text = "Test context (optional, written into the report)";
-            rt.Font = new Font("Microsoft YaHei UI", 10F, FontStyle.Bold);
-            rt.ForeColor = Dark;
-            rt.AutoSize = true;
-            rt.Location = new Point(16, 12);
-            right.Controls.Add(rt);
-
-            int ry = 44;
-            ry = AddField(right, "Case ID", ref _txtCase, ry, false);
-
-            Label ls = new Label();
-            ls.Text = "Symptom description";
-            ls.AutoSize = true;
-            ls.ForeColor = Color.FromArgb(71, 85, 105);
-            ls.Location = new Point(16, ry);
-            right.Controls.Add(ls);
-            _txtSymptom = new TextBox();
-            _txtSymptom.Multiline = true;
-            _txtSymptom.ScrollBars = ScrollBars.Vertical;
-            _txtSymptom.Location = new Point(16, ry + 22);
-            _txtSymptom.Size = new Size(360, 96);
-            _txtSymptom.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            _txtSymptom.BackColor = Color.FromArgb(250, 251, 253);
-            _txtSymptom.BorderStyle = BorderStyle.FixedSingle;
-            right.Controls.Add(_txtSymptom);
-            ry += 128;
-
-            Label hint = new Label();
-            hint.Text = "Notes:\r\n- Do not use the machine while collecting, especially performance and energy items.\r\n- For BSOD issues tick \"Blue screen dumps\" and collect right after the reboot.\r\n- Some items need administrator rights; without them they are marked as skipped.";
-            hint.AutoSize = false;
-            hint.Size = new Size(360, 110);
-            hint.Location = new Point(16, ry);
-            hint.ForeColor = Color.Gray;
-            hint.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-            right.Controls.Add(hint);
+            _analyzer = new AnalyzerPanel();
+            _analyzer.Dock = DockStyle.Fill;
+            _analyzer.Margin = new Padding(10, 0, 0, 0);
+            _analyzer.BackColor = Color.White;
 
             mid.Controls.Add(left, 0, 0);
-            mid.Controls.Add(right, 1, 0);
+            mid.Controls.Add(_analyzer, 1, 0);
 
             // ---------- footer ----------
             Panel bottom = new Panel();
@@ -599,8 +567,6 @@ namespace LogCollector
                 try { s.Info.Serial = Tool.FetchSerial(CancellationToken.None).Trim(); } catch { }
             }
             s.OperatorName = who;
-            s.CaseId = _txtCase.Text.Trim();
-            s.Symptom = _txtSymptom.Text.Trim();
 
             bool needSerial = s.Info.Serial.Length == 0;
             string tag = needSerial ? s.Info.Model : s.Info.Serial;
@@ -646,6 +612,7 @@ namespace LogCollector
             EnableButton(_btnReport, true, Color.FromArgb(16, 185, 129));
             _bar.Value = _bar.Maximum;
             SetStatus("Collection finished, report generated");
+            if (_analyzer != null) _analyzer.ShowPackage(_lastDir);
             ResetScroll();
             DialogResult r = MessageBox.Show(this,
                 "Collection finished.\r\n\r\nOpen the HTML report now?\r\nLocation: " + _lastDir,

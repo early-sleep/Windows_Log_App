@@ -15,14 +15,15 @@ if (-not (Test-Path $csc)) { throw '找不到 csc.exe，请确认已安装 .NET 
 
 New-Item -ItemType Directory -Force -Path $outDir | Out-Null
 
-$files = @('Core.cs', 'Jobs.cs', 'Report.cs', 'HtmlPreview.cs', 'MainForm.cs', 'Program.cs', 'AssemblyInfo.cs') |
+$files = @('Core.cs', 'Jobs.cs', 'Report.cs', 'HtmlPreview.cs', 'AnalyzerCore.cs', 'AnalyzerPanel.cs', 'MainForm.cs', 'Program.cs', 'AssemblyInfo.cs') |
     ForEach-Object { Join-Path $src $_ }
 
 $args = @(
     '/nologo', '/target:winexe', '/platform:anycpu', '/optimize+',
     ('/out:' + $outExe),
     ('/win32manifest:' + (Join-Path $src 'app.manifest')),
-    '/r:System.dll', '/r:System.Core.dll', '/r:System.Drawing.dll', '/r:System.Windows.Forms.dll'
+    '/r:System.dll', '/r:System.Core.dll', '/r:System.Drawing.dll', '/r:System.Windows.Forms.dll',
+    '/r:System.Web.Extensions.dll', '/r:System.Security.dll'
 ) + $files
 
 & $csc @args

@@ -1,4 +1,4 @@
-Laptop Log Collector  v2.3
+Laptop Log Collector  v3.0
 ======================================================================
 
 1. What this is
@@ -7,6 +7,9 @@ A one-click log collection tool for laptop testers. Tick the items you need;
 the tool copies the logs, system information, crash dumps, power and
 performance data into one folder and generates an HTML report that can be
 handed straight to engineering.
+
+The right half of the window is the built-in log analyser: pick a collected
+package, tick the logs and let an AI model analyse them (see section 6).
 
 No installation, no network access, no changes to system settings.
 The interface and all generated reports are in English.
@@ -136,7 +139,35 @@ left out (for example files that were locked or did not fit the free space).
 "Status: Skipped" means there was nothing to collect (for example no BSOD
 has occurred). The reason is written to README.txt inside that folder.
 
-6. Memory dumps
+6. Analysing a package with AI (right panel)
+----------------------------------------------------------------------
+After a collection finishes the panel on the right opens the new package
+automatically. You can also point it anywhere with "Open..." and press Scan.
+
+  Packages root   folder that holds the packages
+  Package         which package to read (newest first)
+  Left list       folders and files of that package
+                    click a folder name to expand it
+                    all / none   tick or untick that folder
+                    click a file name to preview it
+  Preview         text of the selected file (UTF-8 / UTF-16 / GBK detected)
+  AI analysis     Analyze button, Copy, Export .txt and the answer below
+  Settings        endpoint, API key, model and size limits
+
+Only the files you ticked are sent, and only to the endpoint you configured;
+everything else stays on this machine. The answer is written in Chinese.
+
+Before the first analysis open Settings and fill in:
+
+  Endpoint   https://api.deepseek.com/v1      (DeepSeek)
+             https://api.openai.com/v1        (OpenAI)
+             http://localhost:11434/v1        (Ollama, free, local)
+  API key    stored encrypted for your Windows user (DPAPI)
+  Model      deepseek-chat, gpt-4o-mini, qwen2.5:14b ...
+  Chars      per file and in total, keeps the request inside the model
+             context window
+
+7. Memory dumps
 ----------------------------------------------------------------------
 Blue screen dumps are written by Windows, not by this tool. Whether you get
 a GB-sized file depends on the setting "Write debugging information":
@@ -150,7 +181,7 @@ Recovery > Settings > "Write debugging information". A reboot is required,
 and the file only appears after the next BSOD. The page file must also be
 large enough (system managed, or >= 16 GB), otherwise writing the dump fails.
 
-7. FAQ
+8. FAQ
 ----------------------------------------------------------------------
 Q: The header says "Standard user: some items unavailable".
 A: Click "Restart as administrator", or right-click the exe and choose
@@ -183,7 +214,7 @@ A: They were removed to keep the package small. Where each file came from is
    recorded in Collection_Info.txt and the report, and all text content is in
    the single All_Content.html.
 
-8. Command line
+9. Command line
 ----------------------------------------------------------------------
 LogCollector.exe /cli /out:D:\logs /jobs:events-system,sysinfo,minidump
 LogCollector.exe /cli /all /out:D:\logs /tag:SN1234567
@@ -193,7 +224,7 @@ Options: /cli no UI, /out output folder, /jobs comma separated item ids,
 /all every item, /tag package name prefix, /case case id,
 /symptom symptom text.
 
-9. Notes
+10. Notes
 ----------------------------------------------------------------------
 - The tool only reads data. It does not clear logs, change settings or
   install anything.

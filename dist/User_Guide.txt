@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.2
+Laptop Log Collector  v3.3
 ======================================================================
 
 1. What this is
@@ -51,7 +51,7 @@ to 4_System_Info, item 16 to 16_Battery, and so on.
                                        yellow mark in Device Manager
   6  Running processes                 every process running at collection time
   7  Installed updates and software    updates and installed programs
-  8  msinfo32 full report (slow)       more detail, may hang (off by default)
+  8  msinfo32 full report (slow)       more detail, may hang on some machines
 
 [Crashes and dumps]
   9  Blue screen dumps (Minidump)      copies every .dmp in the Minidump folder
@@ -116,10 +116,10 @@ The folder contains:
   7_Installed_Updates_and_Software\
                          installed_updates_and_software.txt
   8_msinfo32\            msinfo32.txt
-  9_Crash_Dumps\         blue screen dmp files
+  9_Mini_Dumps\         blue screen dmp files
  10_WER_Reports\         WER\ mirrors C:\ProgramData\Microsoft\Windows\WER
  11_LiveKernel_Reports\  mirrors C:\Windows\LiveKernelReports
- 12_Memory_Dump\         MEMORY.DMP
+ 12_Memory_Dump\         MEMORY.DMP (copied whatever its size)
  13_Setup_Panther\       Panther\ mirrors C:\Windows\Panther
  14_Windows_Logs\        Logs\ mirrors C:\Windows\Logs
  15_Inf_Drivers\         INF\ mirrors C:\Windows\INF
@@ -194,7 +194,7 @@ A: No. Skipped means there was nothing to collect, for example no BSOD has
    and also listed in the report.
 
 Q: No dump collected for a BSOD
-A: Check the dump setting printed in 9_Crash_Dumps\README.txt. Most often
+A: Check the dump setting printed in 9_Mini_Dumps\README.txt. Most often
    the system is set to "Small memory dump" or no BSOD has occurred yet.
 
 Q: How long does a collection take?

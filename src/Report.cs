@@ -296,7 +296,7 @@ namespace LogCollector
                 }
                 list.Add(new Finding("warn", pnp + " device(s) report a driver error code: " + string.Join(", ", names.ToArray()) + "."));
             }
-            int dumps = CountFiles(Path.Combine(s.OutDir, "9_Crash_Dumps"), "*.dmp", true);
+            int dumps = CountFiles(Path.Combine(s.OutDir, "9_Mini_Dumps"), "*.dmp", true);
             if (dumps > 0)
                 list.Add(new Finding("info", dumps + " memory dump file(s) collected; analyse with WinDbg or BlueScreenView."));
             if (dumps == 0 && bug > 0)
@@ -420,7 +420,7 @@ namespace LogCollector
                 case "6_Runtime_Snapshot": return "All running processes";
                 case "7_Installed_Updates_and_Software": return "Installed updates and software";
                 case "8_msinfo32": return "msinfo32 full report (optional)";
-                case "9_Crash_Dumps": return "Crash dump files for WinDbg";
+                case "9_Mini_Dumps": return "Crash dump files for WinDbg";
                 case "10_WER_Reports": return "Windows Error Reporting (WER)";
                 case "11_LiveKernel_Reports": return "Live kernel reports (GPU hangs/timeouts, no BSOD)";
                 case "12_Memory_Dump": return "Full memory dump (large)";

@@ -24,12 +24,12 @@ namespace LogCollector
             list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Driver store and problem devices", Hint = "Driver store listing + devices with a yellow mark (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
             list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Running processes", Hint = "Every process running at collection time (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
             list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Installed updates and software", Hint = "Track environment changes (~5 s)", DefaultOn = true, Run = Jobs.Software });
-            list.Add(new JobDef { Id = "msinfo32", Category = "Basics", Name = "msinfo32 full report (slow)", Hint = "More detail, but may hang on some machines (off by default)", DefaultOn = false, Run = Jobs.Msinfo32 });
+            list.Add(new JobDef { Id = "msinfo32", Category = "Basics", Name = "msinfo32 full report (slow)", Hint = "More detail, but may hang on some machines (~45 s)", DefaultOn = true, Run = Jobs.Msinfo32 });
 
             list.Add(new JobDef { Id = "minidump", Category = "Crashes and dumps", Name = "Blue screen dumps (Minidump)", Hint = "Essential for BSOD (~3 s)", DefaultOn = true, Run = Jobs.MiniDump });
             list.Add(new JobDef { Id = "wer", Category = "Crashes and dumps", Name = "WER crash reports (full folder)", Hint = "Mirrors C:\\ProgramData\\Microsoft\\Windows\\WER; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.Wer });
             list.Add(new JobDef { Id = "livekernel", Category = "Crashes and dumps", Name = "Live kernel reports", Hint = "Mirrors C:\\Windows\\LiveKernelReports; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.LiveKernel });
-            list.Add(new JobDef { Id = "memdump", Category = "Crashes and dumps", Name = "Full memory dump (MEMORY.DMP)", Hint = "Up to several GB; only if the system already created it", DefaultOn = false, Run = Jobs.MemDump });
+            list.Add(new JobDef { Id = "memdump", Category = "Crashes and dumps", Name = "Full memory dump (MEMORY.DMP)", Hint = "Any size; only if the system already created it", DefaultOn = true, Run = Jobs.MemDump });
 
             list.Add(new JobDef { Id = "panther", Category = "Setup and component logs", Name = "Windows setup logs (Panther)", Hint = "Mirrors C:\\Windows\\Panther; can be ~2 GB; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.PantherLogs });
             list.Add(new JobDef { Id = "winlogs", Category = "Setup and component logs", Name = "Windows component logs", Hint = "Mirrors C:\\Windows\\Logs (CBS, DISM, WindowsUpdate, WinRE)", DefaultOn = true, Run = Jobs.WindowsLogs });
@@ -499,7 +499,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         // ---------------- crashes ----------------
         public static void MiniDump(Session s)
         {
-            string dir = s.Dir("9_Crash_Dumps");
+            string dir = s.Dir("9_Mini_Dumps");
             s.Source(dir, @"C:\Windows\Minidump", "copied as-is");
             string src = @"C:\Windows\Minidump";
             int n = 0;
@@ -557,7 +557,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
             if (n == 0)
             {
                 string reason = skipped.Count > 0
-                    ? "Dump file too large or copy failed; see 9_Crash_Dumps\\skipped_large_files.txt"
+                    ? "Dump file too large or copy failed; see 9_Mini_Dumps\\skipped_large_files.txt"
                     : "No blue screen dump on this system (" + DumpModeName() + ", no BSOD in the last 30 days)";
                 if (skipped.Count == 0) WriteNothing(dir, "No minidump files were found.\r\n\r\n" + DumpPolicy());
                 s.Log("  · No dump file copied");
@@ -676,17 +676,25 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
                     + "; see 11_Memory_Dump\\README.txt for details");
             }
             FileInfo fi = new FileInfo(src);
-            if (fi.Length > 12L * 1024 * 1024 * 1024)
-            {
-                WriteNothing(dir, "MEMORY.DMP exceeds 12 GB; skipped to avoid filling the disk. Copy manually if needed: " + src);
-                throw new SkippedException("MEMORY.DMP exceeds 12 GB; skipped (copy manually)");
-            }
+            s.Log("  · Copying MEMORY.DMP, " + Tool.FmtSize(fi.Length) + ", this may take several minutes...");
+
+            string target = Path.Combine(dir, "MEMORY.DMP");
             try
             {
-                File.Copy(src, Path.Combine(dir, "MEMORY.DMP"), true);
+                long free = -1;
+                try { free = new DriveInfo(Path.GetPathRoot(Path.GetFullPath(dir))).AvailableFreeSpace; } catch { }
+                if (free > 0 && free < fi.Length)
+                    s.Log("  · Warning: target drive has " + Tool.FmtSize(free) + " free, the dump needs " + Tool.FmtSize(fi.Length));
+
+                File.Copy(src, target, true);
                 s.Log("  · Copied MEMORY.DMP, " + Tool.FmtSize(fi.Length));
             }
-            catch (Exception ex) { throw new Exception("Failed to copy MEMORY.DMP: " + ex.Message); }
+            catch (Exception ex)
+            {
+                // 复制失败时不要留下半个文件
+                try { if (File.Exists(target)) File.Delete(target); } catch { }
+                throw new Exception("Failed to copy MEMORY.DMP (" + Tool.FmtSize(fi.Length) + "): " + ex.Message);
+            }
         }
         public static void Wer(Session s)
         {

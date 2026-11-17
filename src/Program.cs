@@ -22,7 +22,7 @@ namespace LogCollector
             d["snapshot"] = "6_Runtime_Snapshot";
             d["software"] = "7_Installed_Updates_and_Software";
             d["msinfo32"] = "8_msinfo32";
-            d["minidump"] = "9_Crash_Dumps";
+            d["minidump"] = "9_Mini_Dumps";
             d["wer"] = "10_WER_Reports";
             d["memdump"] = "12_Memory_Dump";
             d["livekernel"] = "11_LiveKernel_Reports";
@@ -216,7 +216,7 @@ namespace LogCollector
             b.AppendLine("----------------------------------------");
             b.AppendLine("1. Open report.html first: Key findings, Power and sleep settings, Event timeline;");
             b.AppendLine("2. For all text content open All_Content.html;");
-            b.AppendLine("3. BSOD: open the .dmp file under 9_Crash_Dumps with WinDbg;");
+            b.AppendLine("3. BSOD: open the .dmp file under 9_Mini_Dumps with WinDbg;");
             b.AppendLine("4. Event logs: double-click 1_System_Logs/System.evtx to open it in Event Viewer,");
             b.AppendLine("   or read 1_System_Logs/System_events.csv for every event with the full message;");
             b.AppendLine("5. Battery: open 16_Battery/battery_report.html;");
@@ -227,7 +227,7 @@ namespace LogCollector
 
     static class Program
     {
-        public const string Version = "3.2";
+        public const string Version = "3.3";
 
         [STAThread]
         static int Main(string[] args)

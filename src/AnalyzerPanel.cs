@@ -149,7 +149,7 @@ namespace LogCollector
             _cboPkg.DropDownStyle = ComboBoxStyle.DropDownList;
             _cboPkg.Location = new Point(104, 9);
             _cboPkg.Width = 520;
-            _cboPkg.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+            _cboPkg.Anchor = AnchorStyles.Top | AnchorStyles.Left;
             _cboPkg.SelectedIndexChanged += delegate { LoadTree(); };
             bar2.Controls.Add(_cboPkg);
 
@@ -160,8 +160,17 @@ namespace LogCollector
             _lblSel.Size = new Size(200, 22);
             _lblSel.ForeColor = Color.FromArgb(71, 85, 105);
             _lblSel.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+            _lblSel.BorderStyle = BorderStyle.FixedSingle;
             _lblSel.Location = new Point(Width - 216, 11);
             bar2.Controls.Add(_lblSel);
+            bar2.Resize += delegate
+            {
+                int rightEdge = bar2.ClientSize.Width - 16;
+                _lblSel.Left = rightEdge - _lblSel.Width;
+                int w = _lblSel.Left - _cboPkg.Left - 12;
+                _cboPkg.Width = Math.Max(160, w);
+            };
+            bar2.PerformLayout();
 
             // ---------- 主区 ----------
             Panel main = new Panel();
@@ -419,7 +428,12 @@ namespace LogCollector
                 }
                 grp.Items.Add(f);
             }
-            _groups.Sort(delegate(Group a, Group b) { return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase); });
+            _groups.Sort(delegate(Group a, Group b)
+            {
+                int na = NumPrefix(a.Name), nb = NumPrefix(b.Name);
+                if (na != nb) return na.CompareTo(nb);
+                return string.Compare(a.Name, b.Name, StringComparison.OrdinalIgnoreCase);
+            });
             RenderTree();
         }
 
@@ -589,6 +603,16 @@ namespace LogCollector
             b.TextAlign = ContentAlignment.MiddleCenter;
             b.Cursor = Cursors.Hand;
             return b;
+        }
+
+        /// <summary>取目录名前面的数字，用来按 1、2、3… 排序而不是按字符串排序。</summary>
+        private static int NumPrefix(string s)
+        {
+            int i = 0;
+            while (i < s.Length && char.IsDigit(s[i])) i++;
+            if (i == 0) return -1;   // (root) 和没有编号的目录排在最前
+            int n;
+            return int.TryParse(s.Substring(0, i), out n) ? n : int.MaxValue;
         }
 
         private void ToggleGroup(string name)

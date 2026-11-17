@@ -24,7 +24,7 @@ namespace LogCollector
         private RichTextBox _log;
         private ProgressBar _bar;
         private Label _lblStatus, _lblMachine, _lblAdmin;
-        private Button _btnStart, _btnStop, _btnOpen, _btnReport, _btnElevate, _btnBrowse;
+        private Button _btnStart, _btnStop, _btnReport, _btnElevate, _btnBrowse;
         private CancellationTokenSource _cts;
         private bool _running;
         private string _lastDir;
@@ -292,12 +292,6 @@ namespace LogCollector
             _btnBrowse.Click += delegate { BrowseOutput(); };
             bottom.Controls.Add(_btnBrowse);
 
-            _btnOpen = MakeButton("Open folder", Color.FromArgb(107, 114, 128), Color.White);
-            _btnOpen.Size = new Size(110, 34);
-            _btnOpen.Anchor = AnchorStyles.Top | AnchorStyles.Right;
-            _btnOpen.Click += delegate { OpenFolder(); };
-            bottom.Controls.Add(_btnOpen);
-
             _bar = new ProgressBar();
             _bar.Location = new Point(16, 52);
             _bar.Size = new Size(1000, 16);
@@ -364,7 +358,6 @@ namespace LogCollector
             x -= _btnStart.Width; _btnStart.Location = new Point(x, 8);
             x -= _btnStop.Width + gap; _btnStop.Location = new Point(x, 8);
             x -= _btnReport.Width + gap; _btnReport.Location = new Point(x, 8);
-            x -= _btnOpen.Width + gap; _btnOpen.Location = new Point(x, 8);
             x -= _btnBrowse.Width + gap; _btnBrowse.Location = new Point(x, 8);
             int left = 118;
             _txtOut.Location = new Point(left, 11);
@@ -628,10 +621,9 @@ namespace LogCollector
             SetStatus("Collection finished, report generated");
             if (_analyzer != null) _analyzer.ShowPackage(_lastDir);
             ResetScroll();
-            DialogResult r = MessageBox.Show(this,
-                "Collection finished.\r\n\r\nOpen the HTML report now?\r\nLocation: " + _lastDir,
-                "Done", MessageBoxButtons.YesNo, MessageBoxIcon.Information);
-            if (r == DialogResult.Yes) OpenReport();
+            AppendLog("");
+            AppendLog("Saved: " + _lastDir);
+            AppendLog("Use \"View report\" if you want to open report.html.");
         }
 
         private void BrowseOutput()
@@ -657,18 +649,6 @@ namespace LogCollector
                 string p = Path.Combine(_lastDir, "report.html");
                 if (File.Exists(p)) Process.Start(p);
                 else MessageBox.Show(this, "Report file not found.", "Notice");
-            }
-            catch (Exception ex) { MessageBox.Show(this, "Failed to open: " + ex.Message, "Notice"); }
-        }
-
-        private void OpenFolder()
-        {
-            try
-            {
-                string p = _lastDir;
-                if (string.IsNullOrEmpty(p) || !Directory.Exists(p)) p = _txtOut.Text.Trim();
-                if (Directory.Exists(p)) Process.Start("explorer.exe", "\"" + p + "\"");
-                else MessageBox.Show(this, "Folder not found: " + p, "Notice");
             }
             catch (Exception ex) { MessageBox.Show(this, "Failed to open: " + ex.Message, "Notice"); }
         }

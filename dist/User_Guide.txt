@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.1
+Laptop Log Collector  v3.2
 ======================================================================
 
 1. What this is
@@ -31,7 +31,8 @@ The interface and all generated reports are in English.
    to pick one (the default is Desktop\LogCollection)
 5) Click "Start collection" and wait for the progress bar
 
-An "Open the HTML report now?" prompt appears when done.
+When it finishes the package is written to the output folder; nothing is
+opened automatically - press "View report" if you want to look at it.
 
 Avoid using the machine while collecting.
 

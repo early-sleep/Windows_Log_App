@@ -20,6 +20,7 @@ namespace LogCollector
         private List<JobDef> _defs;
         private TextBox _txtOperator, _txtOut;
         private AnalyzerPanel _analyzer;
+        private Panel _panelBottom;
         private RichTextBox _log;
         private ProgressBar _bar;
         private Label _lblStatus, _lblMachine, _lblAdmin;
@@ -237,6 +238,7 @@ namespace LogCollector
             bottom.Dock = DockStyle.Fill;
             bottom.BackColor = Color.White;
             bottom.Margin = new Padding(0);
+            _panelBottom = bottom;
 
             Label lo = new Label();
             lo.Text = "Output folder";
@@ -299,7 +301,6 @@ namespace LogCollector
             _bar = new ProgressBar();
             _bar.Location = new Point(16, 52);
             _bar.Size = new Size(1000, 16);
-            _bar.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
             bottom.Controls.Add(_bar);
 
             _lblStatus = new Label();
@@ -312,7 +313,7 @@ namespace LogCollector
             _log = new RichTextBox();
             _log.Location = new Point(16, 96);
             _log.Size = new Size(1000, 128);
-            _log.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+            _log.ScrollBars = RichTextBoxScrollBars.ForcedVertical;
             _log.BackColor = Color.FromArgb(17, 24, 39);
             _log.ForeColor = Color.FromArgb(209, 213, 219);
             _log.Font = new Font("Consolas", 8.5F);
@@ -354,7 +355,10 @@ namespace LogCollector
 
         private void LayoutBottom()
         {
-            int right = Width - 40 + 16;
+            Panel bottom = _panelBottom;
+            if (bottom == null || _btnStart == null) return;
+
+            int right = bottom.ClientSize.Width - 16;
             int gap = 6;
             int x = right;
             x -= _btnStart.Width; _btnStart.Location = new Point(x, 8);
@@ -365,6 +369,16 @@ namespace LogCollector
             int left = 118;
             _txtOut.Location = new Point(left, 11);
             _txtOut.Width = Math.Max(120, x - left - 12);
+
+            // 进度条和日志框左右对齐，日志框离窗口底边留一点空隙
+            int content = Math.Max(200, bottom.ClientSize.Width - 32);
+            _bar.Location = new Point(16, 52);
+            _bar.Width = content;
+
+            int logTop = 96;
+            int logHeight = Math.Max(40, bottom.ClientSize.Height - logTop - 10);
+            _log.Location = new Point(16, logTop);
+            _log.Size = new Size(content, logHeight);
         }
 
         private int AddField(Panel p, string label, ref TextBox box, int y, bool multi)

@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.3
+Laptop Log Collector  v3.4
 ======================================================================
 
 1. What this is
@@ -18,14 +18,17 @@ The interface and all generated reports are in English.
 ----------------------------------------------------------------------
 - Windows 10 / Windows 11 (64-bit), any display language
 - Portable: a single exe, no .NET / Python / runtime required
+- The exe asks for administrator rights on every start (UAC), so dumps, WER,
+  the event log mirror and Panther are collected without extra steps
 - Run as administrator recommended (otherwise dumps, WER and the sleep study
   report are skipped)
 
 3. Three steps
 ----------------------------------------------------------------------
 1) Double-click LogCollector.exe
-2) Type the name of the collector in "Collected by *" at the top -
-   it is required: "Start collection" stays disabled until it is filled in
+2) Type the name of the collector in "Collected by *" at the top.
+   It is required: pressing "Start collection" with an empty box shows a
+   reminder and puts the cursor back in the box.
 3) Tick what to collect (the common set is already ticked)
 4) Optionally change the output folder: type a path, or press "Browse..."
    to pick one (the default is Desktop\LogCollection)
@@ -104,7 +107,14 @@ The folder contains:
 
   1_System_Logs\         System.evtx
                          System_events.csv    every event, full messages (30 days)
+                         System_events.html   the same table with colour marks
                          System_errors.csv    errors + warnings only (AI friendly)
+                         System_errors.html   coloured version of the above
+
+  Colour marks: 1001 / 41 / 6008 are red (crash, unexpected shutdown),
+                506 / 507 are yellow (enter / leave Modern Standby).
+  CSV cannot hold colours, so the CSV gets a Mark column (RED / YELLOW) you
+  can filter on, and the .html next to it shows the real colours.
   2_Application_Logs\    Application.evtx + Application_events.csv
                          + Application_errors.csv
   3_All_Event_Logs\      all .evtx files: Logs\ is an exact mirror of winevt\Logs

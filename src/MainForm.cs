@@ -258,12 +258,6 @@ namespace LogCollector
             _btnStart.Size = new Size(120, 34);
             _btnStart.Anchor = AnchorStyles.Top | AnchorStyles.Right;
             _btnStart.Click += delegate { StartCollect(); };
-            _txtOperator.TextChanged += delegate
-            {
-                if (_running) return;
-                EnableButton(_btnStart, _txtOperator.Text.Trim().Length > 0, Accent);
-            };
-            EnableButton(_btnStart, _txtOperator.Text.Trim().Length > 0, Accent);
             bottom.Controls.Add(_btnStart);
 
             _btnStop = MakeButton("Stop", Color.FromArgb(220, 38, 38), Color.White);

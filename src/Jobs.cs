@@ -87,6 +87,104 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             ExportLogCsv(s, "System", dir, "System_errors.csv", 30, "1,2,3");
         }
 
+        /// <summary>
+        /// 用同一份数据生成带颜色的 HTML 表格（CSV 本身存不了颜色）：
+        /// 1001 / 41 / 6008 标红，506 / 507 标黄。
+        /// </summary>
+        private static void WriteEventHtml(string csvPath, string htmlPath, string logName)
+        {
+            string[] lines;
+            try { lines = File.ReadAllLines(csvPath, Encoding.UTF8); }
+            catch { return; }
+            if (lines.Length < 2) return;
+
+            List<string> head = SplitCsvLine(lines[0]);
+            int markCol = 0, msgCol = head.Count - 1, timeCol = -1;
+            for (int i = 0; i < head.Count; i++)
+            {
+                if (head[i] == "TimeCreated") timeCol = i;
+                if (head[i] == "Message") msgCol = i;
+            }
+            if (timeCol < 0) timeCol = 1;
+
+            StringBuilder b = new StringBuilder();
+            b.Append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>")
+             .Append(Html(logName)).Append(" events</title><style>");
+            b.Append("body{margin:0;background:#f4f6fa;font:13px/1.5 'Microsoft YaHei','Segoe UI',sans-serif;color:#1f2937}");
+            b.Append("h1{margin:16px 18px 6px;font-size:18px;color:#1f3864}");
+            b.Append(".lg{margin:0 18px 12px;font-size:12px;color:#4b5563}");
+            b.Append(".lg b{display:inline-block;padding:1px 8px;border-radius:4px;margin-right:6px}");
+            b.Append("table{border-collapse:collapse;width:calc(100% - 36px);margin:0 18px 40px;background:#fff}");
+            b.Append("th{position:sticky;top:0;background:#1f3864;color:#fff;font-size:12px;text-align:left;padding:7px 8px}");
+            b.Append("td{border-bottom:1px solid #eef1f6;padding:5px 8px;vertical-align:top;font-size:12px}");
+            b.Append("td.m{white-space:nowrap;color:#6b7280;width:150px}");
+            b.Append("td.n{width:70px;text-align:right;color:#6b7280}");
+            b.Append(".red{background:#fee2e2}.yellow{background:#fef3c7}");
+            b.Append("</style></head><body>");
+            b.Append("<h1>").Append(Html(logName)).Append(" events (").Append(lines.Length - 1).Append(")</h1>");
+            b.Append("<div class=\"lg\">");
+            b.Append("<b class=\"red\">RED</b>1001 / 41 / 6008 &nbsp; ");
+            b.Append("<b class=\"yellow\">YELLOW</b>506 (enter Modern Standby) / 507 (leave Modern Standby)");
+            b.Append("</div>");
+
+            b.Append("<table><thead><tr><th style=\"width:150px\">Time</th><th style=\"width:70px\">Event ID</th><th>Message</th></tr></thead><tbody>");
+            for (int i = 1; i < lines.Length; i++)
+            {
+                string line = lines[i];
+                if (line.Length == 0) continue;
+                List<string> f = SplitCsvLine(line);
+                string mark = f.Count > markCol ? f[markCol] : "";
+                string time = f.Count > timeCol ? f[timeCol] : "";
+                string msg = f.Count > msgCol ? f[msgCol] : "";
+                string id = "";
+                for (int c = 0; c < head.Count && c < f.Count; c++) if (head[c] == "EventID") { id = f[c]; break; }
+                if (msg.Length > 400) msg = msg.Substring(0, 400) + "…";
+
+                string cls = mark == "RED" ? " class=\"red\"" : (mark == "YELLOW" ? " class=\"yellow\"" : "");
+                b.Append("<tr").Append(cls).Append("><td class=\"m\">").Append(Html(time))
+                 .Append("</td><td class=\"n\">").Append(Html(id))
+                 .Append("</td><td>").Append(Html(msg)).Append("</td></tr>\n");
+            }
+            b.Append("</tbody></table></body></html>");
+
+            File.WriteAllText(htmlPath, b.ToString(), new UTF8Encoding(false));
+        }
+
+        /// <summary>按 CSV 规则拆一行（支持双引号与转义的 ""）。</summary>
+        private static List<string> SplitCsvLine(string line)
+        {
+            List<string> res = new List<string>();
+            StringBuilder sb = new StringBuilder();
+            bool quoted = false;
+            for (int i = 0; i < line.Length; i++)
+            {
+                char c = line[i];
+                if (quoted)
+                {
+                    if (c == '"')
+                    {
+                        if (i + 1 < line.Length && line[i + 1] == '"') { sb.Append('"'); i++; }
+                        else quoted = false;
+                    }
+                    else sb.Append(c);
+                }
+                else
+                {
+                    if (c == '"') quoted = true;
+                    else if (c == ',') { res.Add(sb.ToString()); sb.Length = 0; }
+                    else sb.Append(c);
+                }
+            }
+            res.Add(sb.ToString());
+            return res;
+        }
+
+        private static string Html(string s)
+        {
+            if (s == null) return "";
+            return s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+        }
+
         /// <summary>把某个日志通道的全部事件导出成 CSV（完整消息，不截断）。</summary>
         private static void ExportLogCsv(Session s, string logName, string dir, string fileName, int days, string levels)
         {
@@ -100,7 +198,12 @@ $ev = $null
 try { $ev = Get-WinEvent -FilterHashtable @{LogName='" + logName + @"'; StartTime=$start" + levelPart + @"} -ErrorAction SilentlyContinue } catch { }
 if($ev){
   $ev | Sort-Object TimeCreated |
-    Select-Object @{n='TimeCreated';e={$_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')}},
+    Select-Object @{n='Mark';e={
+        if ($_.Id -eq 1001 -or $_.Id -eq 41 -or $_.Id -eq 6008) { 'RED' }
+        elseif ($_.Id -eq 506 -or $_.Id -eq 507) { 'YELLOW' }
+        else { '' }
+      }},
+                  @{n='TimeCreated';e={$_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')}},
                   @{n='LogName';e={$_.LogName}},
                   @{n='EventID';e={$_.Id}},
                   @{n='Level';e={$_.LevelDisplayName}},
@@ -109,7 +212,7 @@ if($ev){
                   @{n='RecordId';e={$_.RecordId}},
                   @{n='User';e={$_.UserId}},
                   @{n='Computer';e={$_.MachineName}},
-                  @{n='Data';e={ (@($_.Properties) | ForEach-Object { $_.Value }) -join ' | ' }},
+                  @{n='Data';e={ (@($_.Properties) | ForEach-Object { ([string]$_.Value) -replace ""[`r`n]+"", ' ' }) -join ' | ' }},
                   @{n='Message';e={ ([string]$_.Message) -replace ""[`r`n]+"",' ' }} |
     Export-Csv -Path $out -NoTypeInformation -Encoding UTF8
   Write-Output ('rows=' + @($ev).Count)
@@ -127,6 +230,7 @@ if($ev){
             if (File.Exists(target))
             {
                 long size = new FileInfo(target).Length;
+                try { WriteEventHtml(target, Path.ChangeExtension(target, ".html"), logName); } catch { }
                 s.Log("  · " + fileName + ": " + rows + " event(s), " + Tool.FmtSize(size));
                 if (size < 100) File.Delete(target);
             }

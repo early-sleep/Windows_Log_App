@@ -30,7 +30,8 @@ namespace LogCollector
         private List<Group> _groups = new List<Group>();
         private HashSet<string> _sel = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         private HashSet<string> _open = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        private Dictionary<string, string> _cache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        private Dictionary<string, string> _cache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);      // 预览用
+        private Dictionary<string, string> _aiCache = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);   // 送 AI 用
         private string _pkgPath = "";
         private string _answer = "";
         private bool _busy;
@@ -409,6 +410,7 @@ namespace LogCollector
             _files = Logs.Tree(p.Path);
             _sel.Clear();
             _cache.Clear();
+            _aiCache.Clear();
             _open.Clear();
 
             _groups = new List<Group>();
@@ -811,19 +813,20 @@ namespace LogCollector
             {
                 if (!_sel.Contains(f.Rel)) continue;
                 string text;
-                if (!_cache.TryGetValue(f.Rel, out text))
+                if (!_aiCache.TryGetValue(f.Rel, out text))
                 {
                     try
                     {
                         string full2 = Path.Combine(_pkgPath, f.Rel);
-                        // 事件表只给“标红/标黄 + 上下文”，不整表灌进去
+                        // 事件表只给“标红/标黄 + 上下文”，绝不整表灌进去；
+                        // 注意这里用独立的缓存，预览里的整表文本不能复用
                         if (f.Rel.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
                             text = Logs.ReadEventDigest(full2, 150000);
                         else
                             text = Logs.ReadText(full2, 512 * 1024);
                     }
                     catch { continue; }
-                    _cache[f.Rel] = text;
+                    _aiCache[f.Rel] = text;
                 }
                 string body = text.Length > _set.Per ? text.Substring(0, _set.Per) + "\r\n...[truncated]" : text;
                 string label = f.Rel.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)

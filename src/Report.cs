@@ -150,7 +150,7 @@ namespace LogCollector
             b.Append("<div class=\"card\"><div class=\"card-t\">Hardware and system</div><table class=\"kv\">");
             Kv(b, "Model", s.Info.Display());
             Kv(b, "Serial", s.Info.Serial);
-            Kv(b, "BIOS", s.Info.Bios + (s.Info.BiosDate.Length > 0 ? "（" + s.Info.BiosDate + "）" : ""));
+            Kv(b, "BIOS", s.Info.Bios + (s.Info.BiosDate.Length > 0 ? " (" + s.Info.BiosDate + ")" : ""));
             Kv(b, "Board", s.Info.Board);
             Kv(b, "CPU", s.Info.Cpu + (s.Info.CpuCores.Length > 0 ? " / " + s.Info.CpuCores : ""));
             Kv(b, "Memory", s.Info.RamGB > 0 ? s.Info.RamGB + " GB" : "");

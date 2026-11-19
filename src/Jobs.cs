@@ -23,7 +23,7 @@ namespace LogCollector
             list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info (systeminfo)", Hint = "Full systeminfo report (~10 s)", DefaultOn = true, Run = Jobs.SysInfo });
             list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Driver store and problem devices", Hint = "Driver store listing + devices with a yellow mark (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
             list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Running processes", Hint = "Every process running at collection time (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
-            list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Installed updates and software", Hint = "系统更新记录与注册表 (~5 s)", DefaultOn = true, Run = Jobs.Software });
+            list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Installed updates and software", Hint = "Installed updates and the uninstall registry (~5 s)", DefaultOn = true, Run = Jobs.Software });
 
             list.Add(new JobDef { Id = "minidump", Category = "Crashes and dumps", Name = "Blue screen dumps (Minidump)", Hint = "Essential for BSOD (~3 s)", DefaultOn = true, Run = Jobs.MiniDump });
             list.Add(new JobDef { Id = "wer", Category = "Crashes and dumps", Name = "WER crash reports (full folder)", Hint = "Mirrors C:\\ProgramData\\Microsoft\\Windows\\WER; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.Wer });
@@ -740,12 +740,12 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
                     FileInfo fi = files[i];
                     if (free > 0 && fi.Length + Reserve > free)
                     {
-                        skipped.Add(fi.FullName + "（" + Tool.FmtSize(fi.Length) + ", not enough free space on target)");
-                        s.Log("  · Not enough space, skipped " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "）");
+                        skipped.Add(fi.FullName + " (" + Tool.FmtSize(fi.Length) + ", not enough free space on target)");
+                        s.Log("  · Not enough space, skipped " + fi.Name + " (" + Tool.FmtSize(fi.Length) + ")");
                         continue;
                     }
                     if (fi.Length > 2L * 1024 * 1024 * 1024)
-                        s.Log("  · Copying large file " + fi.Name + "（" + Tool.FmtSize(fi.Length) + "), this may take several minutes...");
+                        s.Log("  · Copying large file " + fi.Name + " (" + Tool.FmtSize(fi.Length) + "), this may take several minutes...");
                     try
                     {
                         string dst = Path.Combine(dir, fi.Name);
@@ -756,7 +756,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
                     }
                     catch (Exception ex)
                     {
-                        skipped.Add(fi.FullName + " (copy failed: " + ex.Message + "）");
+                        skipped.Add(fi.FullName + " (copy failed: " + ex.Message + ")");
                     }
                 }
             }
@@ -886,7 +886,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
             if (!File.Exists(src))
             {
                 WriteNothing(dir, "No MEMORY.DMP found on this system.\r\n\r\n" + DumpPolicy());
-                s.Log("  · No MEMORY.DMP (" + DumpModeName() + "）");
+                s.Log("  · No MEMORY.DMP (" + DumpModeName() + ")");
                 throw new SkippedException("MEMORY.DMP does not exist: " + DumpModeName()
                     + "; see 11_Memory_Dump\\README.txt for details");
             }

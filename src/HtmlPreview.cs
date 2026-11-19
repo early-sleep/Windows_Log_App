@@ -30,7 +30,12 @@ namespace LogCollector
             List<string> dirs = new List<string>();
             try
             {
-                foreach (string d in Directory.GetDirectories(s.OutDir)) dirs.Add(d);
+                foreach (string c in Directory.GetDirectories(s.OutDir))
+                {
+                    string[] subs = Directory.GetDirectories(c);
+                    if (subs.Length == 0) { dirs.Add(c); continue; }
+                    foreach (string d in subs) dirs.Add(d);
+                }
             }
             catch { }
             dirs.Sort(StringComparer.OrdinalIgnoreCase);
@@ -47,14 +52,14 @@ namespace LogCollector
 
             b.Append("<div class=\"layout\"><nav><div class=\"navt\">Contents</div><ul>");
             b.Append("<li><a href=\"report.html\">◂ Back to report</a></li>");
-            if (File.Exists(Path.Combine(s.OutDir, "1_System_Logs", "System.evtx")))
-                b.Append("<li><a href=\"1_System_Logs/System.evtx\">System.evtx</a></li>");
+            if (File.Exists(Path.Combine(s.OutDir, "Basics", "1_System_Logs", "System.evtx")))
+                b.Append("<li><a href=\"Basics/1_System_Logs/System.evtx\">System.evtx</a></li>");
             List<string> names = new List<string>();
             foreach (string d in dirs)
             {
                 List<FileInfo> fs = Collect(d);
                 if (fs.Count == 0) continue;
-                string n = Path.GetFileName(d);
+                string n = DisplayName(s.OutDir, d);
                 names.Add(n);
                 b.Append("<li><a href=\"#d").Append(names.Count - 1).Append("\">").Append(E(n)).Append("</a></li>");
             }
@@ -70,7 +75,7 @@ namespace LogCollector
             {
                 List<FileInfo> fs = Collect(d);
                 if (fs.Count == 0) continue;
-                string n = Path.GetFileName(d);
+                string n = DisplayName(s.OutDir, d);
                 b.Append("<section id=\"d").Append(idx).Append("\"><h2>").Append(E(n));
                 b.Append("<span class=\"cnt\">").Append(fs.Count).Append(" files / ")
                  .Append(E(Tool.FmtSize(Sum(fs)))).Append("</span>");
@@ -83,6 +88,16 @@ namespace LogCollector
             Foot(b);
 
             File.WriteAllText(Path.Combine(s.OutDir, "All_Content.html"), b.ToString(), new UTF8Encoding(false));
+        }
+
+        private static string DisplayName(string root, string dir)
+        {
+            string name = Path.GetFileName(dir);
+            string parent = Path.GetDirectoryName(dir);
+            if (!string.IsNullOrEmpty(parent) &&
+                !string.Equals(parent.TrimEnd('\\'), root.TrimEnd('\\'), StringComparison.OrdinalIgnoreCase))
+                return Path.GetFileName(parent) + " / " + name;
+            return name;
         }
 
         // ---------------------------------------------------------------- components

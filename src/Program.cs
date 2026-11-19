@@ -14,28 +14,53 @@ namespace LogCollector
         private static Dictionary<string, string> BuildDirs()
         {
             Dictionary<string, string> d = new Dictionary<string, string>();
-            d["events-system"] = "1_System_Logs";
-            d["events-app"] = "2_Application_Logs";
-            d["evtx-all"] = "3_All_Event_Logs";
-            d["sysinfo"] = "4_System_Info";
-            d["drivers"] = "5_Drivers_Devices";
-            d["snapshot"] = "6_Runtime_Snapshot";
-            d["software"] = "7_Installed_Updates_and_Software";
-            d["msinfo32"] = "8_msinfo32";
-            d["minidump"] = "9_Mini_Dumps";
-            d["wer"] = "10_WER_Reports";
-            d["memdump"] = "12_Memory_Dump";
-            d["livekernel"] = "11_LiveKernel_Reports";
-            d["panther"] = "13_Setup_Panther";
-            d["winlogs"] = "14_Windows_Logs";
-            d["inf"] = "15_Inf_Drivers";
-            d["battery"] = "16_Battery";
-            d["powercfg"] = "17_Power_Settings";
-            d["sleepstudy"] = "18_Sleep_Study";
-            d["gpu"] = "19_DXDiag";
-            d["netcfg"] = "20_Network";
-            d["disk"] = "21_Storage";
+            d["events-system"] = "Basics/1_System_Logs";
+            d["events-app"] = "Basics/2_Application_Logs";
+            d["evtx-all"] = "Basics/3_All_Event_Logs";
+            d["sysinfo"] = "Basics/4_System_Info";
+            d["drivers"] = "Basics/5_Drivers_Devices";
+            d["snapshot"] = "Basics/6_Runtime_Snapshot";
+            d["software"] = "Basics/7_Installed_Updates_and_Software";
+            d["minidump"] = "Crashes and dumps/8_Mini_Dumps";
+            d["wer"] = "Crashes and dumps/9_WER_Reports";
+            d["livekernel"] = "Crashes and dumps/10_LiveKernel_Reports";
+            d["memdump"] = "Crashes and dumps/11_Memory_Dump";
+            d["panther"] = "Setup and component logs/12_Setup_Panther";
+            d["winlogs"] = "Setup and component logs/13_Windows_Logs";
+            d["inf"] = "Setup and component logs/14_Inf_Drivers";
+            d["battery"] = "Power and battery/15_Battery";
+            d["powercfg"] = "Power and battery/16_Power_Settings";
+            d["sleepstudy"] = "Power and battery/17_Sleep_Study";
+            d["gpu"] = "Performance/18_DXDiag";
+            d["netcfg"] = "Network/19_Network";
+            d["disk"] = "Storage/20_Storage";
             return d;
+        }
+
+        /// <summary>目录名 -> 带分类的完整相对路径（"1_System_Logs" -> "Basics/1_System_Logs"）。</summary>
+        public static string FullPath(string folder)
+        {
+            string full;
+            if (FolderMap.TryGetValue(folder, out full)) return full;
+            return folder;
+        }
+
+        private static Dictionary<string, string> _folderMap;
+        private static Dictionary<string, string> FolderMap
+        {
+            get
+            {
+                if (_folderMap != null) return _folderMap;
+                Dictionary<string, string> m = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                foreach (string v in JobDirs.Values)
+                {
+                    int cut = v.LastIndexOf('/');
+                    string leaf = cut >= 0 ? v.Substring(cut + 1) : v;
+                    m[leaf] = v;
+                }
+                _folderMap = m;
+                return m;
+            }
         }
 
         /// <summary>任务对应的目录序号，界面上显示的数字和输出目录前缀保持一致。</summary>
@@ -43,9 +68,11 @@ namespace LogCollector
         {
             string dir;
             if (jobId == null || !JobDirs.TryGetValue(jobId, out dir)) return 0;
-            int cut = dir.IndexOf('_');
+            int slash = dir.LastIndexOf('/');
+            string leaf = slash >= 0 ? dir.Substring(slash + 1) : dir;
+            int cut = leaf.IndexOf('_');
             int n;
-            if (cut > 0 && int.TryParse(dir.Substring(0, cut), out n)) return n;
+            if (cut > 0 && int.TryParse(leaf.Substring(0, cut), out n)) return n;
             return 0;
         }
 
@@ -216,18 +243,18 @@ namespace LogCollector
             b.AppendLine("----------------------------------------");
             b.AppendLine("1. Open report.html first: Key findings, Power and sleep settings, Event timeline;");
             b.AppendLine("2. For all text content open All_Content.html;");
-            b.AppendLine("3. BSOD: open the .dmp file under 9_Mini_Dumps with WinDbg;");
-            b.AppendLine("4. Event logs: double-click 1_System_Logs/System.evtx to open it in Event Viewer,");
-            b.AppendLine("   or read 1_System_Logs/System_events.csv for every event with the full message;");
-            b.AppendLine("5. Battery: open 16_Battery/battery_report.html;");
-            b.AppendLine("6. Power settings: see 17_Power_Settings/power_settings.txt (sleep/hibernate/display timeouts, lid action).");
+            b.AppendLine("3. BSOD: open the .dmp file under Crashes and dumps/8_Mini_Dumps with WinDbg;");
+            b.AppendLine("4. Event logs: double-click Basics/1_System_Logs/System.evtx to open it in Event Viewer,");
+            b.AppendLine("   or read Basics/1_System_Logs/System_events.csv for every event with the full message;");
+            b.AppendLine("5. Battery: open Power and battery/15_Battery/battery_report.html;");
+            b.AppendLine("6. Power settings: see Power and battery/16_Power_Settings/power_settings.txt (sleep/hibernate/display timeouts, lid action).");
             return b.ToString();
         }
     }
 
     static class Program
     {
-        public const string Version = "3.4";
+        public const string Version = "3.5";
 
         [STAThread]
         static int Main(string[] args)

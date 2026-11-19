@@ -42,8 +42,8 @@ namespace LogCollector
 
             // ---------- quick links ----------
             b.Append("<div class=\"quick\">Key files:"
-                   + " <a href=\"1_System_Logs/System.evtx\">System.evtx</a>"
-                   + " <a href=\"2_Application_Logs/Application.evtx\">Application.evtx</a>"
+                   + " <a href=\"Basics/1_System_Logs/System.evtx\">System.evtx</a>"
+                   + " <a href=\"Basics/2_Application_Logs/Application.evtx\">Application.evtx</a>"
                    + " <a href=\"All_Content.html\">All content</a>"
                    + " <a href=\"Collection_Info.txt\">Collection info</a></div>");
 
@@ -181,14 +181,26 @@ namespace LogCollector
             b.Append("<thead><tr><th style=\"width:300px\">Folder / file</th><th style=\"width:100px\">Size</th><th>Description</th></tr></thead><tbody>");
             try
             {
-                foreach (string d in Directory.GetDirectories(s.OutDir))
+                List<string> cats = new List<string>(Directory.GetDirectories(s.OutDir));
+                cats.Sort(StringComparer.OrdinalIgnoreCase);
+                foreach (string c in cats)
                 {
-                    string name = Path.GetFileName(d);
-                    b.Append("<tr><td class=\"mono\">");
-                    b.Append(H(name)).Append("/");
-                    b.Append("</td><td class=\"mono\">")
-                     .Append(Tool.FmtSize(Tool.DirSize(d))).Append("</td><td class=\"msg\">")
-                     .Append(H(Explain(name))).Append("</td></tr>");
+                    string catName = Path.GetFileName(c);
+                    List<string> subs = new List<string>(Directory.GetDirectories(c));
+                    if (subs.Count == 0) continue;
+                    subs.Sort(delegate(string x, string y)
+                    {
+                        return NumPrefix(Path.GetFileName(x)).CompareTo(NumPrefix(Path.GetFileName(y)));
+                    });
+                    foreach (string d in subs)
+                    {
+                        string name = Path.GetFileName(d);
+                        b.Append("<tr><td class=\"mono\">");
+                        b.Append(H(catName)).Append(" / ").Append(H(name)).Append("/");
+                        b.Append("</td><td class=\"mono\">")
+                         .Append(Tool.FmtSize(Tool.DirSize(d))).Append("</td><td class=\"msg\">")
+                         .Append(H(Explain(name))).Append("</td></tr>");
+                    }
                 }
             }
             catch { }
@@ -296,7 +308,7 @@ namespace LogCollector
                 }
                 list.Add(new Finding("warn", pnp + " device(s) report a driver error code: " + string.Join(", ", names.ToArray()) + "."));
             }
-            int dumps = CountFiles(Path.Combine(s.OutDir, "9_Mini_Dumps"), "*.dmp", true);
+            int dumps = CountFiles(Path.Combine(s.OutDir, "8_Mini_Dumps"), "*.dmp", true);
             if (dumps > 0)
                 list.Add(new Finding("info", dumps + " memory dump file(s) collected; analyse with WinDbg or BlueScreenView."));
             if (dumps == 0 && bug > 0)
@@ -408,6 +420,15 @@ namespace LogCollector
             return string.Join("；", vals.ToArray());
         }
 
+        private static int NumPrefix(string s)
+        {
+            int i = 0;
+            while (i < s.Length && char.IsDigit(s[i])) i++;
+            int n;
+            if (i > 0 && int.TryParse(s.Substring(0, i), out n)) return n;
+            return 9999;
+        }
+
         private static string Explain(string dir)
         {
             switch (dir)
@@ -420,19 +441,19 @@ namespace LogCollector
                 case "6_Runtime_Snapshot": return "All running processes";
                 case "7_Installed_Updates_and_Software": return "Installed updates and software";
                 case "8_msinfo32": return "msinfo32 full report (optional)";
-                case "9_Mini_Dumps": return "Crash dump files for WinDbg";
-                case "10_WER_Reports": return "Windows Error Reporting (WER)";
-                case "11_LiveKernel_Reports": return "Live kernel reports (GPU hangs/timeouts, no BSOD)";
-                case "12_Memory_Dump": return "Full memory dump (large)";
-                case "13_Setup_Panther": return "Windows setup logs (Panther): setupact, migration, rollback";
-                case "14_Windows_Logs": return "Windows component logs: CBS, DISM, WindowsUpdate, WinRE";
-                case "15_Inf_Drivers": return "Driver INF files and setupapi device install logs";
-                case "16_Battery": return "Battery health report";
-                case "17_Power_Settings": return "Power and sleep timeouts of the active scheme";
-                case "18_Sleep_Study": return "Sleep study and system power report (powercfg /sleepstudy, /spr)";
-                case "19_DXDiag": return "dxdiag report (graphics and display)";
-                case "20_Network": return "Network config, Wi-Fi interfaces and drivers";
-                case "21_Storage": return "Disk and SMART health";
+                case "8_Mini_Dumps": return "Crash dump files for WinDbg";
+                case "9_WER_Reports": return "Windows Error Reporting (WER)";
+                case "10_LiveKernel_Reports": return "Live kernel reports (GPU hangs/timeouts, no BSOD)";
+                case "11_Memory_Dump": return "Full memory dump (large)";
+                case "12_Setup_Panther": return "Windows setup logs (Panther): setupact, migration, rollback";
+                case "13_Windows_Logs": return "Windows component logs: CBS, DISM, WindowsUpdate, WinRE";
+                case "14_Inf_Drivers": return "Driver INF files and setupapi device install logs";
+                case "15_Battery": return "Battery health report";
+                case "16_Power_Settings": return "Power and sleep timeouts of the active scheme";
+                case "17_Sleep_Study": return "Sleep study and system power report (powercfg /sleepstudy, /spr)";
+                case "18_DXDiag": return "dxdiag report (graphics and display)";
+                case "19_Network": return "Network config, Wi-Fi interfaces and drivers";
+                case "20_Storage": return "Disk and SMART health";
             }
             return "";
         }

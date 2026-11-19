@@ -29,6 +29,9 @@ namespace LogCollector
         private bool _running;
         private string _lastDir;
         private List<Panel> _scrollPanels = new List<Panel>();
+        private Panel _quickBar;
+        private List<string> _cats = new List<string>();
+        private HashSet<string> _openCats = new HashSet<string>();
 
         public MainForm()
         {
@@ -173,57 +176,13 @@ namespace LogCollector
             };
             quick.Controls.Add(_txtOperator);
             left.Controls.Add(quick);
+            _quickBar = quick;
             y = 36;
 
-            List<string> cats = new List<string>();
-            foreach (JobDef d in _defs) if (!cats.Contains(d.Category)) cats.Add(d.Category);
-
-            foreach (string cat in cats)
-            {
-                List<JobDef> items = new List<JobDef>();
-                foreach (JobDef d in _defs) if (d.Category == cat) items.Add(d);
-
-                GroupBox gb = new GroupBox();
-                gb.Text = " " + cat + " ";
-                gb.Font = new Font("Microsoft YaHei UI", 9F, FontStyle.Bold);
-                gb.ForeColor = Dark;
-                gb.Location = new Point(0, y);
-                gb.Size = new Size(600, 22 + items.Count * 40);
-                gb.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
-
-                int iy = 22;
-                Dictionary<int, int> seenNum = new Dictionary<int, int>();
-                foreach (JobDef d in items)
-                {
-                    int num = Runner.NumOf(d.Id);
-                    int dup = 0;
-                    if (seenNum.ContainsKey(num)) dup = ++seenNum[num]; else seenNum[num] = 0;
-                    string numTxt = num <= 0 ? "" : (num + (dup == 0 ? "" : ((char)('a' + dup)).ToString()));
-
-                    CheckBox cb = new CheckBox();
-                    cb.Text = Width2(numTxt) + "  " + d.Name;
-                    cb.Checked = d.DefaultOn;
-                    cb.AutoSize = true;
-                    cb.Font = new Font("Microsoft YaHei UI", 9F);
-                    cb.ForeColor = Color.FromArgb(33, 41, 54);
-                    cb.Location = new Point(14, iy);
-                    gb.Controls.Add(cb);
-                    _checks[d.Id] = cb;
-
-                    Label h = new Label();
-                    h.Text = d.Hint;
-                    h.AutoSize = false;
-                    h.Size = new Size(540, 16);
-                    h.ForeColor = Color.Gray;
-                    h.Font = new Font("Microsoft YaHei UI", 8F);
-                    h.Location = new Point(34, iy + 19);
-                    gb.Controls.Add(h);
-
-                    iy += 40;
-                }
-                left.Controls.Add(gb);
-                y += gb.Height + 10;
-            }
+            _cats.Clear();
+            foreach (JobDef d in _defs) if (!_cats.Contains(d.Category)) _cats.Add(d.Category);
+            if (_openCats.Count == 0 && _cats.Count > 0) _openCats.Add(_cats[0]);
+            RenderJobs(left);
 
             _analyzer = new AnalyzerPanel();
             _analyzer.Dock = DockStyle.Fill;
@@ -339,6 +298,106 @@ namespace LogCollector
             int elevateW = _btnElevate.Visible ? _btnElevate.Width + 10 : 0;
             _btnElevate.Location = new Point(w - _btnElevate.Width - 18, 40);
             _lblAdmin.Location = new Point(w - _lblAdmin.Width - 18 - elevateW, 42);
+        }
+
+        /// <summary>按大类渲染采集项：点大类标题展开/收起。</summary>
+        private void RenderJobs(Panel left)
+        {
+            for (int i = left.Controls.Count - 1; i >= 0; i--)
+            {
+                Control c = left.Controls[i];
+                if (c != _quickBar) left.Controls.RemoveAt(i);
+            }
+
+            int y = 36;
+            int width = Math.Max(420, left.ClientSize.Width - 8);
+
+            foreach (string cat in _cats)
+            {
+                List<JobDef> items = new List<JobDef>();
+                foreach (JobDef d in _defs) if (d.Category == cat) items.Add(d);
+                bool open = _openCats.Contains(cat);
+
+                Panel head = new Panel();
+                head.Location = new Point(0, y);
+                head.Size = new Size(width, 30);
+                head.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+                head.BackColor = Color.FromArgb(246, 248, 252);
+                head.Cursor = Cursors.Hand;
+
+                string cname = cat;
+                head.Click += delegate { ToggleCat(cname, left); };
+
+                Label caret = new Label();
+                caret.Text = open ? "\u25BE" : "\u25B8";
+                caret.AutoSize = false;
+                caret.Size = new Size(18, 30);
+                caret.TextAlign = ContentAlignment.MiddleCenter;
+                caret.ForeColor = Color.Gray;
+                caret.Location = new Point(2, 0);
+                caret.Click += delegate { ToggleCat(cname, left); };
+                head.Controls.Add(caret);
+
+                Label nm = new Label();
+                nm.Text = cat;
+                nm.AutoSize = false;
+                nm.Size = new Size(330, 30);
+                nm.TextAlign = ContentAlignment.MiddleLeft;
+                nm.Font = new Font("Microsoft YaHei UI", 9.5F, FontStyle.Bold);
+                nm.ForeColor = Dark;
+                nm.Location = new Point(22, 0);
+                nm.Click += delegate { ToggleCat(cname, left); };
+                head.Controls.Add(nm);
+
+                Label cnt = new Label();
+                cnt.Text = items.Count + " items";
+                cnt.AutoSize = false;
+                cnt.Size = new Size(90, 30);
+                cnt.TextAlign = ContentAlignment.MiddleRight;
+                cnt.ForeColor = Color.Gray;
+                cnt.Font = new Font("Microsoft YaHei UI", 8F);
+                cnt.Anchor = AnchorStyles.Top | AnchorStyles.Right;
+                cnt.Location = new Point(width - 94, 0);
+                cnt.Click += delegate { ToggleCat(cname, left); };
+                head.Controls.Add(cnt);
+
+                left.Controls.Add(head);
+                y += 32;
+
+                if (!open) continue;
+
+                foreach (JobDef d in items)
+                {
+                    CheckBox cb = new CheckBox();
+                    cb.Text = Width2(Runner.NumOf(d.Id).ToString()) + "  " + d.Name;
+                    cb.Checked = d.DefaultOn;
+                    cb.AutoSize = true;
+                    cb.Font = new Font("Microsoft YaHei UI", 9F);
+                    cb.ForeColor = Color.FromArgb(33, 41, 54);
+                    cb.Location = new Point(30, y);
+                    left.Controls.Add(cb);
+                    _checks[d.Id] = cb;
+
+                    Label h = new Label();
+                    h.Text = d.Hint;
+                    h.AutoSize = false;
+                    h.Size = new Size(width - 60, 16);
+                    h.ForeColor = Color.Gray;
+                    h.Font = new Font("Microsoft YaHei UI", 8F);
+                    h.Location = new Point(50, y + 19);
+                    left.Controls.Add(h);
+
+                    y += 40;
+                }
+                y += 6;
+            }
+        }
+
+        private void ToggleCat(string cat, Panel left)
+        {
+            if (_openCats.Contains(cat)) _openCats.Remove(cat);
+            else _openCats.Add(cat);
+            RenderJobs(left);
         }
 
         private void LayoutBottom()

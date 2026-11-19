@@ -416,8 +416,13 @@ namespace LogCollector
             foreach (FileItem f in _files)
             {
                 string rel = f.Rel.Replace('/', '\\');
-                int cut = rel.IndexOf('\\');
-                string g = cut > 0 ? rel.Substring(0, cut) : "(root)";
+                string[] parts = rel.Split('\\');
+
+                // 现在是 大类/序号目录/文件，分组用序号那一层
+                string g;
+                if (parts.Length == 1) g = "(root)";
+                else if (parts.Length >= 3 && !IsNumbered(parts[0]) && IsNumbered(parts[1])) g = parts[1];
+                else g = parts[0];
                 Group grp;
                 if (!map.TryGetValue(g, out grp))
                 {
@@ -603,6 +608,14 @@ namespace LogCollector
             b.TextAlign = ContentAlignment.MiddleCenter;
             b.Cursor = Cursors.Hand;
             return b;
+        }
+
+        /// <summary>目录名是否以数字开头。</summary>
+        private static bool IsNumbered(string s)
+        {
+            int i = 0;
+            while (i < s.Length && char.IsDigit(s[i])) i++;
+            return i > 0;
         }
 
         /// <summary>取目录名前面的数字，用来按 1、2、3… 排序而不是按字符串排序。</summary>

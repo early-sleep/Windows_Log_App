@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.4
+Laptop Log Collector  v3.5
 ======================================================================
 
 1. What this is
@@ -41,52 +41,52 @@ Avoid using the machine while collecting.
 
 4. What each item collects
 ----------------------------------------------------------------------
-The number in front of each item is the output folder number: item 4 writes
-to 4_System_Info, item 16 to 16_Battery, and so on.
+The item list in the window is grouped; click a group name to expand or
+collapse it. The number in front of an item is its folder number, and every
+item is written into its group folder, e.g. Basics\1_System_Logs.
 
 [Basics]
-  1  System event log                  System.evtx plus the full event list as CSV
-  2  Application event log             Application.evtx plus the full event list as CSV
+  1  System event log                  System.evtx plus the full event list as CSV/XLSX
+  2  Application event log             Application.evtx plus the full event list as CSV/XLSX
   3  All event log files (.evtx)       every .evtx under winevt\Logs, folder
                                        structure mirrored incl. empty folders
   4  System info (systeminfo)          full systeminfo report
   5  Driver store and problem devices  driver store listing + devices with a
                                        yellow mark in Device Manager
   6  Running processes                 every process running at collection time
-  7  Installed updates and software    updates and installed programs
-  8  msinfo32 full report (slow)       more detail, may hang on some machines
+  7  Installed updates and software    installed updates and the uninstall registry
 
 [Crashes and dumps]
-  9  Blue screen dumps (Minidump)      copies every .dmp in the Minidump folder
- 10  WER crash reports (full folder)   mirrors C:\ProgramData\Microsoft\Windows\WER
+  8  Blue screen dumps (Minidump)      copies every .dmp in the Minidump folder
+  9  WER crash reports (full folder)   mirrors C:\ProgramData\Microsoft\Windows\WER
                                        with its structure; needs admin
- 11  Live kernel reports               mirrors C:\Windows\LiveKernelReports
+ 10  Live kernel reports               mirrors C:\Windows\LiveKernelReports
                                        (GPU hangs/timeouts without a BSOD); needs admin
- 12  Full memory dump (MEMORY.DMP)     only if the system already created it
+ 11  Full memory dump (MEMORY.DMP)     any size; only if the system created one
 
 [Setup and component logs]
- 13  Windows setup logs (Panther)      mirrors C:\Windows\Panther: setupact.log,
+ 12  Windows setup logs (Panther)      mirrors C:\Windows\Panther: setupact.log,
                                        setupapi, migration and rollback data
                                        (can be ~2 GB; needs admin)
- 14  Windows component logs            mirrors C:\Windows\Logs: CBS, DISM,
+ 13  Windows component logs            mirrors C:\Windows\Logs: CBS, DISM,
                                        WindowsUpdate, WinRE, MoSetup
- 15  Driver INF and setup logs         mirrors C:\Windows\INF incl. setupapi.dev.log
+ 14  Driver INF and setup logs         mirrors C:\Windows\INF incl. setupapi.dev.log
 
 [Power and battery]
- 16  Battery health report             design/full capacity, cycles, drain curve
- 17  Power settings                    sleep/hibernate/display/disk timeouts,
+ 15  Battery health report             design/full capacity, cycles, drain curve
+ 16  Power settings                    sleep/hibernate/display/disk timeouts,
                                        lid and power button action, hybrid sleep
- 18  Sleep study + system power report powercfg /sleepstudy and powercfg /spr
+ 17  Sleep study + system power report powercfg /sleepstudy and powercfg /spr
                                        (sleepstudy-report.html); needs admin
 
 [Performance]
- 19  DXDiag (graphics and display)     dxdiag report: GPU driver, display modes
+ 18  DXDiag (graphics and display)     dxdiag report: GPU driver, display modes
 
 [Network]
- 20  Network configuration snapshot    IP, routes, DNS, Wi-Fi, proxy, TCP
+ 19  Network configuration snapshot    IP, routes, DNS, Wi-Fi, proxy, TCP
 
 [Storage]
- 21  Disk and SMART health             health, temperature, power-on hours, wear
+ 20  Disk and SMART health             health, temperature, power-on hours, wear
 
 5. Output
 ----------------------------------------------------------------------
@@ -105,37 +105,35 @@ The folder contains:
   Collection_Info.txt    what was collected, status and how to read it
   Collected_By.txt       who collected this package and when
 
-  1_System_Logs\         System.evtx
-                         System_events.csv    every event, full messages (30 days)
-                         System_events.html   the same table with colour marks
-                         System_errors.csv    errors + warnings only (AI friendly)
-                         System_errors.html   coloured version of the above
+  Basics\
+    1_System_Logs\         System.evtx
+                            System_events.csv   every event, full messages (30 days)
+                            System_events.xlsx  the same table, coloured in Excel
+                            System_errors.csv   errors + warnings only (AI friendly)
+                            System_errors.xlsx  coloured version of the above
+    2_Application_Logs\    Application.evtx + the same four files
+    3_All_Event_Logs\      all .evtx: Logs\ is an exact mirror of winevt\Logs
+                            (empty folders included) when run as administrator;
+                            otherwise Channels\ holds one .evtx per exported channel
+    4_System_Info\         systeminfo.txt
+    5_Drivers_Devices\     driver_store.txt / problem_devices.txt
+    6_Runtime_Snapshot\    running_processes.txt
+    7_Installed_Updates_and_Software\
+                            installed_updates_and_software.txt
 
-  Colour marks: 1001 / 41 / 6008 are red (crash, unexpected shutdown),
-                506 / 507 are yellow (enter / leave Modern Standby).
-  CSV cannot hold colours, so the CSV gets a Mark column (RED / YELLOW) you
-  can filter on, and the .html next to it shows the real colours.
-  2_Application_Logs\    Application.evtx + Application_events.csv
-                         + Application_errors.csv
-  3_All_Event_Logs\      all .evtx files: Logs\ is an exact mirror of winevt\Logs
-                         (empty folders included) when run as administrator;
-                         otherwise Channels\ holds one .evtx per exported channel
-  4_System_Info\         systeminfo.txt
-  5_Drivers_Devices\     driver_store.txt / problem_devices.txt
-  6_Runtime_Snapshot\    running_processes.txt
-  7_Installed_Updates_and_Software\
-                         installed_updates_and_software.txt
-  8_msinfo32\            msinfo32.txt
-  9_Mini_Dumps\         blue screen dmp files
- 10_WER_Reports\         WER\ mirrors C:\ProgramData\Microsoft\Windows\WER
- 11_LiveKernel_Reports\  mirrors C:\Windows\LiveKernelReports
- 12_Memory_Dump\         MEMORY.DMP (copied whatever its size)
- 13_Setup_Panther\       Panther\ mirrors C:\Windows\Panther
- 14_Windows_Logs\        Logs\ mirrors C:\Windows\Logs
- 15_Inf_Drivers\         INF\ mirrors C:\Windows\INF
- 16_Battery\             battery_report.html
- 17_Power_Settings\      power_settings.txt
- 18_Sleep_Study\ 19_DXDiag\ 20_Network\ 21_Storage\
+  Crashes and dumps\
+    8_Mini_Dumps\          one .dmp per blue screen
+    9_WER_Reports\         WER\ mirrors C:\ProgramData\Microsoft\Windows\WER
+    10_LiveKernel_Reports\ mirrors C:\Windows\LiveKernelReports
+    11_Memory_Dump\        MEMORY.DMP, whatever its size
+
+  Setup and component logs\
+    12_Setup_Panther\  13_Windows_Logs\  14_Inf_Drivers\
+
+  Power and battery\
+    15_Battery\  16_Power_Settings\  17_Sleep_Study\
+
+  Performance\18_DXDiag\      Network\19_Network\      Storage\20_Storage\
 
 Only the folders for the items you ticked are created.
 

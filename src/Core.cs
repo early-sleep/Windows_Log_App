@@ -147,7 +147,8 @@ namespace LogCollector
 
         public string Dir(string name)
         {
-            string p = System.IO.Path.Combine(OutDir, name);
+            // "1_System_Logs" 会自动落到 "Basics/1_System_Logs"
+            string p = System.IO.Path.Combine(OutDir, Runner.FullPath(name));
             if (!Directory.Exists(p)) Directory.CreateDirectory(p);
             return p;
         }

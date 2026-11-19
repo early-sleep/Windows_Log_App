@@ -23,8 +23,7 @@ namespace LogCollector
             list.Add(new JobDef { Id = "sysinfo", Category = "Basics", Name = "System info (systeminfo)", Hint = "Full systeminfo report (~10 s)", DefaultOn = true, Run = Jobs.SysInfo });
             list.Add(new JobDef { Id = "drivers", Category = "Basics", Name = "Driver store and problem devices", Hint = "Driver store listing + devices with a yellow mark (~10 s)", DefaultOn = true, Run = Jobs.Drivers });
             list.Add(new JobDef { Id = "snapshot", Category = "Basics", Name = "Running processes", Hint = "Every process running at collection time (~5 s)", DefaultOn = true, Run = Jobs.Snapshot });
-            list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Installed updates and software", Hint = "Track environment changes (~5 s)", DefaultOn = true, Run = Jobs.Software });
-            list.Add(new JobDef { Id = "msinfo32", Category = "Basics", Name = "msinfo32 full report (slow)", Hint = "More detail, but may hang on some machines (~45 s)", DefaultOn = true, Run = Jobs.Msinfo32 });
+            list.Add(new JobDef { Id = "software", Category = "Basics", Name = "Installed updates and software", Hint = "系统更新记录与注册表 (~5 s)", DefaultOn = true, Run = Jobs.Software });
 
             list.Add(new JobDef { Id = "minidump", Category = "Crashes and dumps", Name = "Blue screen dumps (Minidump)", Hint = "Essential for BSOD (~3 s)", DefaultOn = true, Run = Jobs.MiniDump });
             list.Add(new JobDef { Id = "wer", Category = "Crashes and dumps", Name = "WER crash reports (full folder)", Hint = "Mirrors C:\\ProgramData\\Microsoft\\Windows\\WER; needs admin", DefaultOn = true, NeedAdmin = true, Run = Jobs.Wer });
@@ -88,10 +87,10 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
         }
 
         /// <summary>
-        /// 用同一份数据生成带颜色的 HTML 表格（CSV 本身存不了颜色）：
-        /// 1001 / 41 / 6008 标红，506 / 507 标黄。
+        /// 生成带底色的事件表（.xlsx）。CSV 本身存不了颜色，Excel 能读的唯一带格式的
+        /// 文件就是 xlsx：1001 / 41 / 6008 红底，506 / 507 黄底。
         /// </summary>
-        private static void WriteEventHtml(string csvPath, string htmlPath, string logName)
+        private static void WriteEventXlsx(string csvPath, string xlsxPath)
         {
             string[] lines;
             try { lines = File.ReadAllLines(csvPath, Encoding.UTF8); }
@@ -99,55 +98,186 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             if (lines.Length < 2) return;
 
             List<string> head = SplitCsvLine(lines[0]);
-            int markCol = 0, msgCol = head.Count - 1, timeCol = -1;
+            int markCol = 0, timeCol = 1, idCol = -1, msgCol = head.Count - 1;
             for (int i = 0; i < head.Count; i++)
             {
                 if (head[i] == "TimeCreated") timeCol = i;
+                if (head[i] == "EventID") idCol = i;
                 if (head[i] == "Message") msgCol = i;
             }
-            if (timeCol < 0) timeCol = 1;
+            if (idCol < 0) idCol = timeCol;
 
-            StringBuilder b = new StringBuilder();
-            b.Append("<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\"><title>")
-             .Append(Html(logName)).Append(" events</title><style>");
-            b.Append("body{margin:0;background:#f4f6fa;font:13px/1.5 'Microsoft YaHei','Segoe UI',sans-serif;color:#1f2937}");
-            b.Append("h1{margin:16px 18px 6px;font-size:18px;color:#1f3864}");
-            b.Append(".lg{margin:0 18px 12px;font-size:12px;color:#4b5563}");
-            b.Append(".lg b{display:inline-block;padding:1px 8px;border-radius:4px;margin-right:6px}");
-            b.Append("table{border-collapse:collapse;width:calc(100% - 36px);margin:0 18px 40px;background:#fff}");
-            b.Append("th{position:sticky;top:0;background:#1f3864;color:#fff;font-size:12px;text-align:left;padding:7px 8px}");
-            b.Append("td{border-bottom:1px solid #eef1f6;padding:5px 8px;vertical-align:top;font-size:12px}");
-            b.Append("td.m{white-space:nowrap;color:#6b7280;width:150px}");
-            b.Append("td.n{width:70px;text-align:right;color:#6b7280}");
-            b.Append(".red{background:#fee2e2}.yellow{background:#fef3c7}");
-            b.Append("</style></head><body>");
-            b.Append("<h1>").Append(Html(logName)).Append(" events (").Append(lines.Length - 1).Append(")</h1>");
-            b.Append("<div class=\"lg\">");
-            b.Append("<b class=\"red\">RED</b>1001 / 41 / 6008 &nbsp; ");
-            b.Append("<b class=\"yellow\">YELLOW</b>506 (enter Modern Standby) / 507 (leave Modern Standby)");
-            b.Append("</div>");
+            // 表头：Time / Event ID / Level / Provider / Message，比较适合人看
+            int lvlCol = -1, provCol = -1;
+            for (int i = 0; i < head.Count; i++)
+            {
+                if (head[i] == "Level") lvlCol = i;
+                if (head[i] == "Provider") provCol = i;
+            }
 
-            b.Append("<table><thead><tr><th style=\"width:150px\">Time</th><th style=\"width:70px\">Event ID</th><th>Message</th></tr></thead><tbody>");
+            StringBuilder sheet = new StringBuilder();
+            sheet.Append("<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>");
+            sheet.Append("<worksheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">");
+            sheet.Append("<cols><col min=\"1\" max=\"1\" width=\"19\" customWidth=\"1\"/>");
+            sheet.Append("<col min=\"2\" max=\"2\" width=\"9\" customWidth=\"1\"/>");
+            sheet.Append("<col min=\"3\" max=\"3\" width=\"11\" customWidth=\"1\"/>");
+            sheet.Append("<col min=\"4\" max=\"4\" width=\"30\" customWidth=\"1\"/>");
+            sheet.Append("<col min=\"5\" max=\"5\" width=\"110\" customWidth=\"1\"/></cols><sheetData>");
+
+            sheet.Append("<row r=\"1\">");
+            string[] cols = new string[] { "A", "B", "C", "D", "E" };
+            string[] titles = new string[] { "Time", "Event ID", "Level", "Provider", "Message" };
+            for (int c = 0; c < titles.Length; c++)
+                sheet.Append(Cell(cols[c] + "1", titles[c], 3));
+            sheet.Append("</row>");
+
+            int rowNo = 1;
             for (int i = 1; i < lines.Length; i++)
             {
-                string line = lines[i];
-                if (line.Length == 0) continue;
-                List<string> f = SplitCsvLine(line);
+                if (lines[i].Length == 0) continue;
+                List<string> f = SplitCsvLine(lines[i]);
                 string mark = f.Count > markCol ? f[markCol] : "";
+                int style = mark == "RED" ? 1 : (mark == "YELLOW" ? 2 : 0);
+
                 string time = f.Count > timeCol ? f[timeCol] : "";
+                string id = f.Count > idCol ? f[idCol] : "";
+                string lvl = (lvlCol >= 0 && f.Count > lvlCol) ? f[lvlCol] : "";
+                string prov = (provCol >= 0 && f.Count > provCol) ? f[provCol] : "";
                 string msg = f.Count > msgCol ? f[msgCol] : "";
-                string id = "";
-                for (int c = 0; c < head.Count && c < f.Count; c++) if (head[c] == "EventID") { id = f[c]; break; }
-                if (msg.Length > 400) msg = msg.Substring(0, 400) + "…";
+                if (msg.Length > 1000) msg = msg.Substring(0, 1000) + "…";
 
-                string cls = mark == "RED" ? " class=\"red\"" : (mark == "YELLOW" ? " class=\"yellow\"" : "");
-                b.Append("<tr").Append(cls).Append("><td class=\"m\">").Append(Html(time))
-                 .Append("</td><td class=\"n\">").Append(Html(id))
-                 .Append("</td><td>").Append(Html(msg)).Append("</td></tr>\n");
+                rowNo++;
+                sheet.Append("<row r=\"").Append(rowNo).Append("\">");
+                string r = rowNo.ToString();
+                sheet.Append(Cell("A" + r, time, style));
+                sheet.Append(Cell("B" + r, id, style));
+                sheet.Append(Cell("C" + r, lvl, style));
+                sheet.Append(Cell("D" + r, prov, style));
+                sheet.Append(Cell("E" + r, msg, style));
+                sheet.Append("</row>");
             }
-            b.Append("</tbody></table></body></html>");
+            sheet.Append("</sheetData></worksheet>");
 
-            File.WriteAllText(htmlPath, b.ToString(), new UTF8Encoding(false));
+            string contentTypes =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+                "<Types xmlns=\"http://schemas.openxmlformats.org/package/2006/content-types\">" +
+                "<Default Extension=\"rels\" ContentType=\"application/vnd.openxmlformats-package.relationships+xml\"/>" +
+                "<Default Extension=\"xml\" ContentType=\"application/xml\"/>" +
+                "<Override PartName=\"/xl/workbook.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml\"/>" +
+                "<Override PartName=\"/xl/worksheets/sheet1.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml\"/>" +
+                "<Override PartName=\"/xl/styles.xml\" ContentType=\"application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml\"/>" +
+                "</Types>";
+
+            string rels =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+                "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+                "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument\" Target=\"xl/workbook.xml\"/>" +
+                "</Relationships>";
+
+            string workbook =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+                "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" " +
+                "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
+                "<sheets><sheet name=\"Events\" sheetId=\"1\" r:id=\"rId1\"/></sheets></workbook>";
+
+            string wbRels =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+                "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">" +
+                "<Relationship Id=\"rId1\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet\" Target=\"worksheets/sheet1.xml\"/>" +
+                "<Relationship Id=\"rId2\" Type=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles\" Target=\"styles.xml\"/>" +
+                "</Relationships>";
+
+            string styles =
+                "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>" +
+                "<styleSheet xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\">" +
+                "<fonts count=\"2\">" +
+                "<font><sz val=\"10\"/><name val=\"Microsoft YaHei\"/></font>" +
+                "<font><b/><sz val=\"10\"/><color rgb=\"FFFFFFFF\"/><name val=\"Microsoft YaHei\"/></font>" +
+                "</fonts>" +
+                "<fills count=\"5\">" +
+                "<fill><patternFill patternType=\"none\"/></fill>" +
+                "<fill><patternFill patternType=\"gray125\"/></fill>" +
+                "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFFEE2E2\"/><bgColor indexed=\"64\"/></patternFill></fill>" +
+                "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FFFEF3C7\"/><bgColor indexed=\"64\"/></patternFill></fill>" +
+                "<fill><patternFill patternType=\"solid\"><fgColor rgb=\"FF1F3864\"/><bgColor indexed=\"64\"/></patternFill></fill>" +
+                "</fills>" +
+                "<borders count=\"1\"><border><left/><right/><top/><bottom/><diagonal/></border></borders>" +
+                "<cellStyleXfs count=\"1\"><xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\"/></cellStyleXfs>" +
+                "<cellXfs count=\"5\">" +
+                "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"0\" borderId=\"0\" xfId=\"0\"/>" +
+                "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"2\" borderId=\"0\" xfId=\"0\" applyFill=\"1\"/>" +
+                "<xf numFmtId=\"0\" fontId=\"0\" fillId=\"3\" borderId=\"0\" xfId=\"0\" applyFill=\"1\"/>" +
+                "<xf numFmtId=\"0\" fontId=\"1\" fillId=\"4\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>" +
+                "<xf numFmtId=\"0\" fontId=\"1\" fillId=\"4\" borderId=\"0\" xfId=\"0\" applyFont=\"1\" applyFill=\"1\"/>" +
+                "</cellXfs>" +
+                "</styleSheet>";
+
+            string tmp = xlsxPath + ".tmp";
+            try
+            {
+                using (FileStream fs = new FileStream(tmp, FileMode.Create, FileAccess.Write))
+                using (System.IO.Compression.ZipArchive zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Create))
+                {
+                    AddZip(zip, "[Content_Types].xml", contentTypes);
+                    AddZip(zip, "_rels/.rels", rels);
+                    AddZip(zip, "xl/workbook.xml", workbook);
+                    AddZip(zip, "xl/_rels/workbook.xml.rels", wbRels);
+                    AddZip(zip, "xl/styles.xml", styles);
+                    AddZip(zip, "xl/worksheets/sheet1.xml", sheet.ToString());
+                }
+                if (File.Exists(xlsxPath)) File.Delete(xlsxPath);
+                File.Move(tmp, xlsxPath);
+            }
+            catch
+            {
+                try { if (File.Exists(tmp)) File.Delete(tmp); } catch { }
+                throw;
+            }
+        }
+
+        private static void AddZip(System.IO.Compression.ZipArchive zip, string name, string content)
+        {
+            System.IO.Compression.ZipArchiveEntry e = zip.CreateEntry(name, System.IO.Compression.CompressionLevel.Optimal);
+            using (Stream s = e.Open())
+            {
+                byte[] data = new UTF8Encoding(false).GetBytes(content);
+                s.Write(data, 0, data.Length);
+            }
+        }
+
+        /// <summary>一个内联字符串单元格。</summary>
+        private static string Cell(string col, string text, int style)
+        {
+            StringBuilder s = new StringBuilder();
+            s.Append("<c");
+            if (col.Length > 0) s.Append(" r=\"").Append(col).Append("\"");
+            s.Append(" s=\"").Append(style).Append("\" t=\"inlineStr\"><is><t xml:space=\"preserve\">")
+             .Append(Xml(text)).Append("</t></is></c>");
+            return s.ToString();
+        }
+
+        private static string Xml(string s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            StringBuilder b = new StringBuilder(s.Length + 16);
+            foreach (char c in s)
+            {
+                switch (c)
+                {
+                    case '&': b.Append("&amp;"); break;
+                    case '<': b.Append("&lt;"); break;
+                    case '>': b.Append("&gt;"); break;
+                    case '"': b.Append("&quot;"); break;
+                    case '\r': break;
+                    case '\n': b.Append(' '); break;
+                    case '\t': b.Append(' '); break;
+                    default:
+                        if (c < 0x20) break;      // XML 不允许的控制字符
+                        b.Append(c);
+                        break;
+                }
+            }
+            return b.ToString();
         }
 
         /// <summary>按 CSV 规则拆一行（支持双引号与转义的 ""）。</summary>
@@ -177,12 +307,6 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             }
             res.Add(sb.ToString());
             return res;
-        }
-
-        private static string Html(string s)
-        {
-            if (s == null) return "";
-            return s.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
         }
 
         /// <summary>把某个日志通道的全部事件导出成 CSV（完整消息，不截断）。</summary>
@@ -230,7 +354,7 @@ if($ev){
             if (File.Exists(target))
             {
                 long size = new FileInfo(target).Length;
-                try { WriteEventHtml(target, Path.ChangeExtension(target, ".html"), logName); } catch { }
+                try { WriteEventXlsx(target, Path.ChangeExtension(target, ".xlsx")); } catch { }
                 s.Log("  · " + fileName + ": " + rows + " event(s), " + Tool.FmtSize(size));
                 if (size < 100) File.Delete(target);
             }
@@ -496,19 +620,6 @@ E 'OS' 'LastBoot' $os.LastBootUpTime
             ParseProbe(probeOut, s);
         }
 
-        public static void Msinfo32(Session s)
-        {
-            string dir = s.Dir("8_msinfo32");
-            s.Source(dir, @"msinfo32.exe /report", "generated on this machine");
-            string f = Path.Combine(dir, "msinfo32.txt");
-            string o;
-            Tool.Run("msinfo32.exe", "/report " + Tool.Q(f), 45000, s.Token, out o, Encoding.Default);
-            WaitFile(f, 40000, s.Token);
-            Tool.NormalizeTextFile(f);
-            if (!File.Exists(f))
-                throw new Exception("msinfo32 did not produce a file in time (it hangs on some machines); use another item instead");
-        }
-
         public static void Drivers(Session s)
         {
             string dir = s.Dir("5_Drivers_Devices");
@@ -603,7 +714,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         // ---------------- crashes ----------------
         public static void MiniDump(Session s)
         {
-            string dir = s.Dir("9_Mini_Dumps");
+            string dir = s.Dir("8_Mini_Dumps");
             s.Source(dir, @"C:\Windows\Minidump", "copied as-is");
             string src = @"C:\Windows\Minidump";
             int n = 0;
@@ -661,7 +772,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
             if (n == 0)
             {
                 string reason = skipped.Count > 0
-                    ? "Dump file too large or copy failed; see 9_Mini_Dumps\\skipped_large_files.txt"
+                    ? "Dump file too large or copy failed; see 8_Mini_Dumps\\skipped_large_files.txt"
                     : "No blue screen dump on this system (" + DumpModeName() + ", no BSOD in the last 30 days)";
                 if (skipped.Count == 0) WriteNothing(dir, "No minidump files were found.\r\n\r\n" + DumpPolicy());
                 s.Log("  · No dump file copied");
@@ -769,7 +880,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
 
         public static void MemDump(Session s)
         {
-            string dir = s.Dir("12_Memory_Dump");
+            string dir = s.Dir("11_Memory_Dump");
             s.Source(dir, @"C:\Windows\MEMORY.DMP", "copied as-is");
             string src = @"C:\Windows\MEMORY.DMP";
             if (!File.Exists(src))
@@ -802,7 +913,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         }
         public static void Wer(Session s)
         {
-            string dir = s.Dir("10_WER_Reports");
+            string dir = s.Dir("9_WER_Reports");
             string root = @"C:\ProgramData\Microsoft\Windows\WER";
             s.Source(dir, root, "full folder mirror, structure and empty folders preserved (needs admin)");
             if (!Directory.Exists(root)) throw new SkippedException("WER folder not found: " + root);
@@ -828,7 +939,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         /// <summary>LiveKernelReports（无蓝屏的 GPU 挂起/超时等）整目录镜像。</summary>
         public static void LiveKernel(Session s)
         {
-            string dir = s.Dir("11_LiveKernel_Reports");
+            string dir = s.Dir("10_LiveKernel_Reports");
             string root = @"C:\Windows\LiveKernelReports";
             s.Source(dir, root, "full folder mirror, structure and empty folders preserved (needs admin)");
             if (!Directory.Exists(root)) throw new SkippedException("Live kernel report folder not found: " + root);
@@ -863,21 +974,21 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
 
         public static void PantherLogs(Session s)
         {
-            MirrorJob(s, "13_Setup_Panther", @"C:\Windows\Panther",
+            MirrorJob(s, "12_Setup_Panther", @"C:\Windows\Panther",
                       "full folder mirror, structure and empty folders preserved (needs admin)", 2560L * 1024 * 1024);
         }
 
         /// <summary>C:\Windows\Logs —— CBS / DISM / WindowsUpdate 等组件日志。</summary>
         public static void WindowsLogs(Session s)
         {
-            MirrorJob(s, "14_Windows_Logs", @"C:\Windows\Logs",
+            MirrorJob(s, "13_Windows_Logs", @"C:\Windows\Logs",
                       "full folder mirror, structure and empty folders preserved", 2048L * 1024 * 1024);
         }
 
         /// <summary>C:\Windows\INF —— 驱动 INF 与 setupapi 设备安装日志。</summary>
         public static void InfFolder(Session s)
         {
-            MirrorJob(s, "15_Inf_Drivers", @"C:\Windows\INF",
+            MirrorJob(s, "14_Inf_Drivers", @"C:\Windows\INF",
                       "full folder mirror, structure and empty folders preserved", 1024L * 1024 * 1024);
         }
 
@@ -954,7 +1065,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         // ---------------- power ----------------
         public static void Battery(Session s)
         {
-            string dir = s.Dir("16_Battery");
+            string dir = s.Dir("15_Battery");
             s.Source(dir, @"powercfg /batteryreport", "generated on this machine");
             string o;
             string f = Path.Combine(dir, "battery_report.html");
@@ -985,7 +1096,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
 
         public static void PowerCfg(Session s)
         {
-            string dir = s.Dir("17_Power_Settings");
+            string dir = s.Dir("16_Power_Settings");
             s.Source(dir, @"powercfg /qh, /a, /getactivescheme, /requests, /lastwake, /waketimers", "queried from the running system");
             CollectPowerSettings(s, dir);
         }
@@ -1097,7 +1208,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
 
         public static void SleepStudy(Session s)
         {
-            string dir = s.Dir("18_Sleep_Study");
+            string dir = s.Dir("17_Sleep_Study");
             s.Source(dir, @"powercfg /sleepstudy  +  powercfg /spr  ->  C:\Windows\System32\sleepstudy-report.html",
                      "reports generated on this machine (needs administrator)");
             string f = Path.Combine(dir, "sleep_study.html");
@@ -1129,7 +1240,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         // ---------------- performance ----------------
         public static void Gpu(Session s)
         {
-            string dir = s.Dir("19_DXDiag");
+            string dir = s.Dir("18_DXDiag");
             s.Source(dir, @"dxdiag /t", "generated on this machine");
             string f = Path.Combine(dir, "dxdiag.txt");
             string o;
@@ -1141,7 +1252,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         // ---------------- network ----------------
         public static void NetCfg(Session s)
         {
-            string dir = s.Dir("20_Network");
+            string dir = s.Dir("19_Network");
             s.Source(dir, @"ipconfig /all, route print, arp -a, netsh wlan / int tcp", "queried from the running system");
             StringBuilder sb = new StringBuilder();
             string[][] cmds = new string[][] {
@@ -1168,7 +1279,7 @@ Get-Process | Sort-Object WS -Descending | Select-Object Name,Id,@{n='CPU_s';e={
         // ---------------- storage ----------------
         public static void Disk(Session s)
         {
-            string dir = s.Dir("21_Storage");
+            string dir = s.Dir("20_Storage");
             s.Source(dir, @"Get-PhysicalDisk / Get-Volume / Get-StorageReliabilityCounter", "queried from the running system");
             string ps = @"
 [System.Threading.Thread]::CurrentThread.CurrentCulture = [System.Globalization.CultureInfo]::InvariantCulture

@@ -23,7 +23,8 @@ $args = @(
     ('/out:' + $outExe),
     ('/win32manifest:' + (Join-Path $src 'app.manifest')),
     '/r:System.dll', '/r:System.Core.dll', '/r:System.Drawing.dll', '/r:System.Windows.Forms.dll',
-    '/r:System.Web.Extensions.dll', '/r:System.Security.dll'
+    '/r:System.Web.Extensions.dll', '/r:System.Security.dll',
+    '/r:System.IO.Compression.dll', '/r:System.IO.Compression.FileSystem.dll'
 ) + $files
 
 & $csc @args

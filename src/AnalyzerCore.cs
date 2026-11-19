@@ -146,6 +146,7 @@ namespace LogCollector
         /// <summary>
         /// 事件表的“重点摘要”：只挑被标红（41 / 6008 / 1001）和被标黄（506 / 507）的事件，
         /// 每条带上前后若干行上下文，给 AI 用来推断原因。
+        /// 上下文放不下时会缩小窗口，并明确写出覆盖了多少条，避免模型对不上数量。
         /// </summary>
         public static string ReadEventDigest(string path, int cap)
         {
@@ -168,66 +169,86 @@ namespace LogCollector
 
             List<int> red = new List<int>();
             List<int> yellow = new List<int>();
+            int n506 = 0, n507 = 0;
             for (int i = 1; i < rows.Count; i++)
             {
                 int id;
                 if (!int.TryParse(CellOf(rows[i], idCol), out id)) continue;
                 if (Array.IndexOf(redIds, id) >= 0) red.Add(i);
-                else if (Array.IndexOf(yellowIds, id) >= 0) yellow.Add(i);
+                else if (Array.IndexOf(yellowIds, id) >= 0)
+                {
+                    yellow.Add(i);
+                    if (id == 506) n506++; else n507++;
+                }
             }
 
-            StringBuilder b = new StringBuilder();
-            b.Append("rows: ").Append(rows.Count - 1)
-             .Append("   red (41/6008/1001): ").Append(red.Count)
-             .Append("   yellow (506/507): ").Append(yellow.Count).Append("\n");
-
-            // 先列出所有被标记的事件，保证即使后面上下文被截断，模型也知道有哪些
-            b.Append("\nMARKED EVENTS\n");
-            AppendMarked(b, rows, red, "RED", cap);
-            AppendMarked(b, rows, yellow, "YELLOW", cap);
-
-            // 再给每条的上下文窗口
             List<int> all = new List<int>();
             all.AddRange(red);
             all.AddRange(yellow);
             all.Sort();
 
-            const int Before = 12, After = 6;
-            b.Append("\nCONTEXT WINDOWS (12 rows before, 6 after each marked event)\n");
+            StringBuilder b = new StringBuilder();
+            b.Append("rows: ").Append(rows.Count - 1)
+             .Append("   red (41/6008/1001): ").Append(red.Count)
+             .Append("   yellow (506/507): ").Append(yellow.Count)
+             .Append("  [506: ").Append(n506).Append(", 507: ").Append(n507).Append("]\n");
+            b.Append("The two counts above are the true totals for this file.\n");
+
+            // 全量列出标记事件（这份清单永远完整，模型据此对齐数量）
+            b.Append("\nMARKED EVENTS (").Append(all.Count).Append(")\n");
+            foreach (int i in all)
+                b.Append(Array.IndexOf(redIds, SafeInt(CellOf(rows[i], idCol))) >= 0 ? "RED     " : "YELLOW  ")
+                 .Append(LineOf(rows[i], head, 150)).Append('\n');
+
+            // 窗口大小按标记数量自适应
+            int marked = all.Count;
+            int before, after, clip;
+            if (marked <= 30) { before = 12; after = 6; clip = 200; }
+            else if (marked <= 60) { before = 8; after = 4; clip = 150; }
+            else { before = 6; after = 3; clip = 110; }
+
+            StringBuilder ctx = new StringBuilder();
             int lastEmitted = -1;
+            int covered = 0;
+            int budget = Math.Max(20000, cap - b.Length - 2000);
             foreach (int idx in all)
             {
-                if (b.Length > cap) { b.Append("\n...[digest truncated at ").Append(cap).Append(" chars]\n"); break; }
-                int from = Math.Max(1, idx - Before);
-                int to = Math.Min(rows.Count - 1, idx + After);
-                if (from <= lastEmitted) from = lastEmitted + 1;    // 窗口重叠时不重复
+                if (ctx.Length > budget) break;
+                int from = Math.Max(1, idx - before);
+                int to = Math.Min(rows.Count - 1, idx + after);
+                if (from <= lastEmitted) from = lastEmitted + 1;   // 窗口重叠不重复
                 if (from > to) continue;
 
-                b.Append("\n--- around ").Append(CellOf(rows[idx], timeCol))
-                 .Append("  Event ").Append(CellOf(rows[idx], idCol)).Append(" ---\n");
+                ctx.Append("\n--- around ").Append(CellOf(rows[idx], timeCol))
+                   .Append("  Event ").Append(CellOf(rows[idx], idCol)).Append(" ---\n");
                 for (int r = from; r <= to; r++)
                 {
-                    b.Append(r == idx ? ">> " : "   ");
-                    b.Append(LineOf(rows[r], head, 220)).Append('\n');
+                    ctx.Append(r == idx ? ">> " : "   ");
+                    ctx.Append(LineOf(rows[r], head, clip)).Append('\n');
                 }
                 lastEmitted = to;
+                covered++;
             }
 
-            if (red.Count == 0 && yellow.Count == 0)
+            b.Append("\nCONTEXT WINDOWS (").Append(before).Append(" rows before / ").Append(after).Append(" after)")
+             .Append(" - shown for ").Append(covered).Append(" of ").Append(marked).Append(" marked events")
+             .Append(covered < marked
+                     ? "; the opening list above is complete, only the surrounding rows are trimmed.\n"
+                     : "\n");
+            b.Append(ctx);
+
+            if (marked == 0)
                 b.Append("\nNo red or yellow event in this table.\n");
 
             string text = b.ToString();
-            if (text.Length > cap) text = text.Substring(0, cap) + "\n...[truncated]";
+            if (text.Length > cap) text = text.Substring(0, cap) + "\n...[truncated]\n";
             return text;
         }
 
-        private static void AppendMarked(StringBuilder b, List<string[]> rows, List<int> idx, string tag, int cap)
+        private static int SafeInt(string s)
         {
-            foreach (int i in idx)
-            {
-                if (b.Length > cap / 2) { b.Append("   ... (more ").Append(tag).Append(" events omitted)\n"); return; }
-                b.Append(tag).Append("  ").Append(LineOf(rows[i], null, 160)).Append('\n');
-            }
+            int v;
+            return int.TryParse(s, out v) ? v : -1;
         }
 
         private static string CellOf(string[] row, int col)

@@ -254,11 +254,12 @@ namespace LogCollector
 
     static class Program
     {
-        public const string Version = "3.8";
+        public const string Version = "3.9";
 
         [STAThread]
         static int Main(string[] args)
         {
+
 
             bool cli = false, all = false, verbose = false;
             string outDir = "", jobsArg = "", appDir = "", caseId = "", symptom = "", tag = "", proc = "";

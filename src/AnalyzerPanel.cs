@@ -818,7 +818,7 @@ namespace LogCollector
                         string full2 = Path.Combine(_pkgPath, f.Rel);
                         // 事件表只给“标红/标黄 + 上下文”，不整表灌进去
                         if (f.Rel.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
-                            text = Logs.ReadEventDigest(full2, 120000);
+                            text = Logs.ReadEventDigest(full2, 150000);
                         else
                             text = Logs.ReadText(full2, 512 * 1024);
                     }

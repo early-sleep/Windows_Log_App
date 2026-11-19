@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.8
+Laptop Log Collector  v3.9
 ======================================================================
 
 1. What this is
@@ -167,9 +167,11 @@ automatically. You can also point it anywhere with "Open..." and press Scan.
   Settings        endpoint, API key, model and size limits
 
 If you tick an event table (.xlsx), the analyser does not send all of it:
-it sends every red / yellow event plus 12 rows before and 6 rows after each
-one, and asks the model for the cause of those events only - what happened
-around the crash, and why the machine entered or left Modern Standby.
+it sends the complete list of red / yellow events (with the Reason text) plus
+the surrounding rows for as many of them as fit, and asks the model for the
+cause of those events only. When the context had to be trimmed the digest
+says so and still gives the true totals, so the counts in the answer match
+the file.
 
 Only the files you ticked are sent, and only to the endpoint you configured;
 everything else stays on this machine. The answer is written in Chinese.

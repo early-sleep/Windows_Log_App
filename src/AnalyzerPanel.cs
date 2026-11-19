@@ -704,13 +704,27 @@ namespace LogCollector
             string content = BuildContent();
             if (content.Length == 0) { MessageBox.Show(FindForm(), "The selected files produced no text."); return; }
 
-            string question = "请分析这些日志，按领域（启动、电源、驱动、磁盘、网络、应用）归纳主要问题，"
-                            + "并说明每个问题的判断依据和置信度。";
+            bool hasEventTable = content.IndexOf("=== EVENT TABLE", StringComparison.Ordinal) >= 0;
+
+            string question = hasEventTable
+                ? "请只做重点分析，不要逐条复述日志：\r\n"
+                + "1) 红色的 41 / 6008 / 1001 事件：逐个说明它发生前上下文里出现了什么（驱动、硬件、电源、服务失败等），"
+                + "最可能的根本原因是什么，置信度多少；\r\n"
+                + "2) 黄色的 506 / 507 事件：为什么进入 Modern Standby、为什么退出，"
+                + "有没有异常（进入后很久没退出、没有对应的 507、被意外唤醒、退出后马上又进入等）；\r\n"
+                + "3) 如果红黄事件之间有共同诱因，单独指出来；\r\n"
+                + "4) 最后给 3 到 5 条可执行的排查或复现建议。"
+                : "请分析这些日志，按领域（启动、电源、驱动、磁盘、网络、应用）归纳主要问题，"
+                  + "并说明每个问题的判断依据和置信度。";
             string user = "Analyse these Windows laptop logs and answer the question at the end.\r\n\r\n"
                         + content + "\r\n\r\n---\r\nQuestion: " + question;
             string system = "你是一名资深的 Windows 平台工程师，正在分析笔记本测试中采集到的日志。"
                           + "请用中文回答，结论要具体，引用文件名和时间戳，明确区分“日志已证实”和“你的推测”。"
-                          + "使用简短的小标题和要点列表，不要输出与日志无关的客套话。";
+                          + "使用简短的小标题和要点列表，不要输出与日志无关的客套话。"
+                          + (hasEventTable
+                             ? " 事件表里标红的是 41/6008/1001（蓝屏、意外关机），标黄的是 506/507（进入/退出 Modern Standby）。"
+                               + "请把注意力放在这些标记事件的原因上，只讲重点。"
+                             : "");
 
             _busy = true;
             _btnAnalyze.Enabled = false;
@@ -799,12 +813,23 @@ namespace LogCollector
                 string text;
                 if (!_cache.TryGetValue(f.Rel, out text))
                 {
-                    try { text = Logs.ReadText(Path.Combine(_pkgPath, f.Rel), 512 * 1024); }
+                    try
+                    {
+                        string full2 = Path.Combine(_pkgPath, f.Rel);
+                        // 事件表只给“标红/标黄 + 上下文”，不整表灌进去
+                        if (f.Rel.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                            text = Logs.ReadEventDigest(full2, 120000);
+                        else
+                            text = Logs.ReadText(full2, 512 * 1024);
+                    }
                     catch { continue; }
                     _cache[f.Rel] = text;
                 }
                 string body = text.Length > _set.Per ? text.Substring(0, _set.Per) + "\r\n...[truncated]" : text;
-                string block = "=== FILE: " + f.Rel + " (" + Logs.Size(f.Size) + ") ===\r\n" + body + "\r\n\r\n";
+                string label = f.Rel.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase)
+                    ? "=== EVENT TABLE (marked events + context): " + f.Rel + " ==="
+                    : "=== FILE: " + f.Rel + " (" + Logs.Size(f.Size) + ") ===";
+                string block = label + "\r\n" + body + "\r\n\r\n";
                 if (sb.Length + block.Length > _set.Total)
                 {
                     sb.AppendLine("...[total size limit reached, remaining files skipped]");

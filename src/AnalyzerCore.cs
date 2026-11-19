@@ -107,6 +107,145 @@ namespace LogCollector
             return Decode(buf);
         }
 
+        /// <summary>把 xlsx 的 sheet1 解析成行（每行是若干单元格文本）。</summary>
+        public static List<string[]> ReadXlsxRows(string path)
+        {
+            List<string[]> rows = new List<string[]>();
+            using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+            using (System.IO.Compression.ZipArchive zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Read))
+            {
+                System.IO.Compression.ZipArchiveEntry entry = zip.GetEntry("xl/worksheets/sheet1.xml");
+                if (entry == null) return rows;
+
+                using (Stream s = entry.Open())
+                using (System.Xml.XmlReader r = System.Xml.XmlReader.Create(s))
+                {
+                    List<string> cur = null;
+                    while (r.Read())
+                    {
+                        if (r.NodeType == System.Xml.XmlNodeType.Element && r.Name == "row")
+                        {
+                            cur = new List<string>();
+                        }
+                        else if (r.NodeType == System.Xml.XmlNodeType.Element && r.Name == "t")
+                        {
+                            string v = r.ReadElementContentAsString();
+                            if (cur != null) cur.Add(v);
+                        }
+                        else if (r.NodeType == System.Xml.XmlNodeType.EndElement && r.Name == "row" && cur != null)
+                        {
+                            rows.Add(cur.ToArray());
+                            cur = null;
+                        }
+                    }
+                }
+            }
+            return rows;
+        }
+
+        /// <summary>
+        /// 事件表的“重点摘要”：只挑被标红（41 / 6008 / 1001）和被标黄（506 / 507）的事件，
+        /// 每条带上前后若干行上下文，给 AI 用来推断原因。
+        /// </summary>
+        public static string ReadEventDigest(string path, int cap)
+        {
+            List<string[]> rows;
+            try { rows = ReadXlsxRows(path); }
+            catch (Exception ex) { return "[cannot read event table] " + ex.Message; }
+            if (rows.Count < 2) return "";
+
+            string[] head = rows[0];
+            int idCol = -1, timeCol = 0;
+            for (int i = 0; i < head.Length; i++)
+            {
+                if (head[i] == "Event ID") idCol = i;
+                if (head[i] == "Time" || head[i] == "TimeCreated") timeCol = i;
+            }
+            if (idCol < 0) idCol = 1;
+
+            int[] redIds = new int[] { 41, 6008, 1001 };
+            int[] yellowIds = new int[] { 506, 507 };
+
+            List<int> red = new List<int>();
+            List<int> yellow = new List<int>();
+            for (int i = 1; i < rows.Count; i++)
+            {
+                int id;
+                if (!int.TryParse(CellOf(rows[i], idCol), out id)) continue;
+                if (Array.IndexOf(redIds, id) >= 0) red.Add(i);
+                else if (Array.IndexOf(yellowIds, id) >= 0) yellow.Add(i);
+            }
+
+            StringBuilder b = new StringBuilder();
+            b.Append("rows: ").Append(rows.Count - 1)
+             .Append("   red (41/6008/1001): ").Append(red.Count)
+             .Append("   yellow (506/507): ").Append(yellow.Count).Append("\n");
+
+            // 先列出所有被标记的事件，保证即使后面上下文被截断，模型也知道有哪些
+            b.Append("\nMARKED EVENTS\n");
+            AppendMarked(b, rows, red, "RED", cap);
+            AppendMarked(b, rows, yellow, "YELLOW", cap);
+
+            // 再给每条的上下文窗口
+            List<int> all = new List<int>();
+            all.AddRange(red);
+            all.AddRange(yellow);
+            all.Sort();
+
+            const int Before = 12, After = 6;
+            b.Append("\nCONTEXT WINDOWS (12 rows before, 6 after each marked event)\n");
+            int lastEmitted = -1;
+            foreach (int idx in all)
+            {
+                if (b.Length > cap) { b.Append("\n...[digest truncated at ").Append(cap).Append(" chars]\n"); break; }
+                int from = Math.Max(1, idx - Before);
+                int to = Math.Min(rows.Count - 1, idx + After);
+                if (from <= lastEmitted) from = lastEmitted + 1;    // 窗口重叠时不重复
+                if (from > to) continue;
+
+                b.Append("\n--- around ").Append(CellOf(rows[idx], timeCol))
+                 .Append("  Event ").Append(CellOf(rows[idx], idCol)).Append(" ---\n");
+                for (int r = from; r <= to; r++)
+                {
+                    b.Append(r == idx ? ">> " : "   ");
+                    b.Append(LineOf(rows[r], head, 220)).Append('\n');
+                }
+                lastEmitted = to;
+            }
+
+            if (red.Count == 0 && yellow.Count == 0)
+                b.Append("\nNo red or yellow event in this table.\n");
+
+            string text = b.ToString();
+            if (text.Length > cap) text = text.Substring(0, cap) + "\n...[truncated]";
+            return text;
+        }
+
+        private static void AppendMarked(StringBuilder b, List<string[]> rows, List<int> idx, string tag, int cap)
+        {
+            foreach (int i in idx)
+            {
+                if (b.Length > cap / 2) { b.Append("   ... (more ").Append(tag).Append(" events omitted)\n"); return; }
+                b.Append(tag).Append("  ").Append(LineOf(rows[i], null, 160)).Append('\n');
+            }
+        }
+
+        private static string CellOf(string[] row, int col)
+        {
+            if (row == null || col < 0 || col >= row.Length) return "";
+            return row[col] ?? "";
+        }
+
+        /// <summary>一行拼成 "时间 | id | 级别 | 来源 | 消息" 这样的可读形式。</summary>
+        private static string LineOf(string[] row, string[] head, int clip)
+        {
+            string time = CellOf(row, 0), id = CellOf(row, 1), level = CellOf(row, 2);
+            string prov = CellOf(row, 3);
+            string msg = row.Length > 0 ? row[row.Length - 1] : "";
+            if (msg.Length > clip) msg = msg.Substring(0, clip) + "…";
+            return time + " | " + id + " | " + level + " | " + prov + " | " + msg;
+        }
+
         /// <summary>
         /// 把采集包里的 .xlsx 事件表读成“一行一条、制表符分隔”的文本，
         /// 预览和 AI 都能直接用（CSV 已经不再生成）。

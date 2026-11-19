@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.7
+Laptop Log Collector  v3.8
 ======================================================================
 
 1. What this is
@@ -165,6 +165,11 @@ automatically. You can also point it anywhere with "Open..." and press Scan.
   Preview         text of the selected file (UTF-8 / UTF-16 / GBK detected)
   AI analysis     Analyze button, Copy, Export .txt and the answer below
   Settings        endpoint, API key, model and size limits
+
+If you tick an event table (.xlsx), the analyser does not send all of it:
+it sends every red / yellow event plus 12 rows before and 6 rows after each
+one, and asks the model for the cause of those events only - what happened
+around the crash, and why the machine entered or left Modern Standby.
 
 Only the files you ticked are sent, and only to the endpoint you configured;
 everything else stays on this machine. The answer is written in Chinese.

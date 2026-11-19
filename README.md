@@ -17,6 +17,10 @@ Every release gets its own branch; `main` always tracks the latest development s
 | Branch | Version | Notes |
 |---|---|---|
 | `main` | dev | latest code, may contain unreleased changes |
+| `v3.7` | v3.7 | event tables only as coloured .xlsx (no CSV); the analyser reads .xlsx directly |
+| `v3.6` | v3.6 | all UI hints back to English |
+| `v3.5` | v3.5 | items grouped by category, category folders in the package, collapsible list |
+| `v3.4` | v3.4 | runs elevated, collector-name prompt, colour marks |
 | `v3.0` | v3.0 | the log analyser is built in: the right half of the window lists the package, previews files and asks an AI model to analyse the ticked logs |
 | `v2.1` | v2.1 | collector name field in the top bar written to `Collected_By.txt`; CSV-per-channel, process dump, energy report, performance sampling and extra-folder items removed; folders renumbered 1-21 |
 | `v2.0` | v2.0 | folders renumbered from 1, WLAN report and per-folder browse/SOURCE files removed, trimmed items (systeminfo only, driver store + yellow-mark devices, all running processes, power settings only), DXDiag, "Installed updates and software"; the same number is shown in front of every item in the UI |
@@ -61,8 +65,9 @@ AI settings live in `%APPDATA%\BsodAnalyzer\settings.json` (the API key is DPAPI
 - `Collection_Info.txt` — what was collected, status and how to read it
 - `Collected_By.txt` — collector name, package, machine and start time
 - Raw logs: `System.evtx`, `Application.evtx`, `*.dmp`, CSV/TXT exports
-- `System_events.csv` / `Application_events.csv` - every event in the log with the full message text
-- `System_errors.csv` / `Application_errors.csv` - errors and warnings only, small enough to hand to an AI
+- `System_events.xlsx` / `Application_events.xlsx` — every event with the full message text, rows coloured in
+  Excel (1001 / 41 / 6008 red, 506 / 507 yellow); the built-in analyser reads these directly
+- `System_errors.xlsx` / `Application_errors.xlsx` — errors and warnings only
 
 Text files are decoded as UTF-8, UTF-16 or GBK automatically, so Chinese output of system tools
 still renders correctly.

@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.6
+Laptop Log Collector  v3.7
 ======================================================================
 
 1. What this is
@@ -46,8 +46,8 @@ collapse it. The number in front of an item is its folder number, and every
 item is written into its group folder, e.g. Basics\1_System_Logs.
 
 [Basics]
-  1  System event log                  System.evtx plus the full event list as CSV/XLSX
-  2  Application event log             Application.evtx plus the full event list as CSV/XLSX
+  1  System event log                  System.evtx plus the full event list as .xlsx
+  2  Application event log             Application.evtx plus the full event list as .xlsx
   3  All event log files (.evtx)       every .evtx under winevt\Logs, folder
                                        structure mirrored incl. empty folders
   4  System info (systeminfo)          full systeminfo report
@@ -107,11 +107,9 @@ The folder contains:
 
   Basics\
     1_System_Logs\         System.evtx
-                            System_events.csv   every event, full messages (30 days)
-                            System_events.xlsx  the same table, coloured in Excel
-                            System_errors.csv   errors + warnings only (AI friendly)
-                            System_errors.xlsx  coloured version of the above
-    2_Application_Logs\    Application.evtx + the same four files
+                            System_events.xlsx  every event, full messages (30 days)
+                            System_errors.xlsx  errors + warnings only
+    2_Application_Logs\    Application.evtx + the same two .xlsx files
     3_All_Event_Logs\      all .evtx: Logs\ is an exact mirror of winevt\Logs
                             (empty folders included) when run as administrator;
                             otherwise Channels\ holds one .evtx per exported channel
@@ -136,6 +134,11 @@ The folder contains:
   Performance\18_DXDiag\      Network\19_Network\      Storage\20_Storage\
 
 Only the folders for the items you ticked are created.
+
+The event tables are .xlsx only (no CSV): a CSV cannot carry colours. In the
+.xlsx 1001 / 41 / 6008 are red (crash, unexpected shutdown) and 506 / 507 are
+yellow (enter / leave Modern Standby). Excel shows them already coloured, and
+the built-in analyser reads the .xlsx as text for the AI.
 
 All .txt files in the package are UTF-8 with BOM, so Chinese text from
 system tools (ipconfig, systeminfo, netsh, pnputil) displays correctly in

@@ -79,6 +79,7 @@ namespace LogCollector
             switch (ext)
             {
                 case ".txt": case ".csv": case ".log": case ".json": case ".md": case ".ini": case ".xml":
+                case ".xlsx":
                     return "text";
                 case ".html": case ".htm":
                     return "html";
@@ -91,6 +92,9 @@ namespace LogCollector
 
         public static string ReadText(string full, int cap)
         {
+            if (full.EndsWith(".xlsx", StringComparison.OrdinalIgnoreCase))
+                return ReadXlsx(full, cap);
+
             byte[] buf;
             using (FileStream fs = new FileStream(full, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
             {
@@ -101,6 +105,54 @@ namespace LogCollector
                 if (read < want) Array.Resize(ref buf, read);
             }
             return Decode(buf);
+        }
+
+        /// <summary>
+        /// 把采集包里的 .xlsx 事件表读成“一行一条、制表符分隔”的文本，
+        /// 预览和 AI 都能直接用（CSV 已经不再生成）。
+        /// </summary>
+        private static string ReadXlsx(string path, int cap)
+        {
+            StringBuilder sb = new StringBuilder();
+            try
+            {
+                using (FileStream fs = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite))
+                using (System.IO.Compression.ZipArchive zip = new System.IO.Compression.ZipArchive(fs, System.IO.Compression.ZipArchiveMode.Read))
+                {
+                    System.IO.Compression.ZipArchiveEntry entry = zip.GetEntry("xl/worksheets/sheet1.xml");
+                    if (entry == null) return "[cannot read xlsx: sheet1.xml missing]";
+
+                    using (Stream s = entry.Open())
+                    using (System.Xml.XmlReader r = System.Xml.XmlReader.Create(s))
+                    {
+                        int cells = 0;
+                        bool firstRow = true;
+                        while (r.Read() && sb.Length < cap)
+                        {
+                            if (r.NodeType == System.Xml.XmlNodeType.Element && r.Name == "row")
+                            {
+                                if (!firstRow) sb.Append('\n');
+                                firstRow = false;
+                                cells = 0;
+                            }
+                            else if (r.NodeType == System.Xml.XmlNodeType.Element && r.Name == "t")
+                            {
+                                string v = r.ReadElementContentAsString();
+                                if (cells > 0) sb.Append('\t');
+                                sb.Append(v);
+                                cells++;
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                return "[cannot read xlsx] " + ex.Message;
+            }
+            string text = sb.ToString();
+            if (text.Length > cap) text = text.Substring(0, cap) + "\r\n...[truncated]";
+            return text;
         }
 
         private static string Decode(byte[] buf)

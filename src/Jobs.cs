@@ -82,8 +82,8 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             string outp = Tool.Ps(script, 180000, s.Token);
             ParseEvents(outp, "System", s);
 
-            ExportLogCsv(s, "System", dir, "System_events.csv", 30, null);
-            ExportLogCsv(s, "System", dir, "System_errors.csv", 30, "1,2,3");
+            ExportEventTable(s, "System", dir, "System_events", 30, null);
+            ExportEventTable(s, "System", dir, "System_errors", 30, "1,2,3");
         }
 
         /// <summary>
@@ -108,11 +108,12 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             if (idCol < 0) idCol = timeCol;
 
             // 表头：Time / Event ID / Level / Provider / Message，比较适合人看
-            int lvlCol = -1, provCol = -1;
+            int lvlCol = -1, provCol = -1, dataCol = -1;
             for (int i = 0; i < head.Count; i++)
             {
                 if (head[i] == "Level") lvlCol = i;
                 if (head[i] == "Provider") provCol = i;
+                if (head[i] == "Data") dataCol = i;
             }
 
             StringBuilder sheet = new StringBuilder();
@@ -122,11 +123,12 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             sheet.Append("<col min=\"2\" max=\"2\" width=\"9\" customWidth=\"1\"/>");
             sheet.Append("<col min=\"3\" max=\"3\" width=\"11\" customWidth=\"1\"/>");
             sheet.Append("<col min=\"4\" max=\"4\" width=\"30\" customWidth=\"1\"/>");
-            sheet.Append("<col min=\"5\" max=\"5\" width=\"110\" customWidth=\"1\"/></cols><sheetData>");
+            sheet.Append("<col min=\"5\" max=\"5\" width=\"40\" customWidth=\"1\"/>");
+            sheet.Append("<col min=\"6\" max=\"6\" width=\"110\" customWidth=\"1\"/></cols><sheetData>");
 
             sheet.Append("<row r=\"1\">");
-            string[] cols = new string[] { "A", "B", "C", "D", "E" };
-            string[] titles = new string[] { "Time", "Event ID", "Level", "Provider", "Message" };
+            string[] cols = new string[] { "A", "B", "C", "D", "E", "F" };
+            string[] titles = new string[] { "Time", "Event ID", "Level", "Provider", "Data", "Message" };
             for (int c = 0; c < titles.Length; c++)
                 sheet.Append(Cell(cols[c] + "1", titles[c], 3));
             sheet.Append("</row>");
@@ -143,7 +145,9 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
                 string id = f.Count > idCol ? f[idCol] : "";
                 string lvl = (lvlCol >= 0 && f.Count > lvlCol) ? f[lvlCol] : "";
                 string prov = (provCol >= 0 && f.Count > provCol) ? f[provCol] : "";
+                string data = (dataCol >= 0 && f.Count > dataCol) ? f[dataCol] : "";
                 string msg = f.Count > msgCol ? f[msgCol] : "";
+                if (data.Length > 300) data = data.Substring(0, 300) + "…";
                 if (msg.Length > 1000) msg = msg.Substring(0, 1000) + "…";
 
                 rowNo++;
@@ -153,7 +157,8 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
                 sheet.Append(Cell("B" + r, id, style));
                 sheet.Append(Cell("C" + r, lvl, style));
                 sheet.Append(Cell("D" + r, prov, style));
-                sheet.Append(Cell("E" + r, msg, style));
+                sheet.Append(Cell("E" + r, data, style));
+                sheet.Append(Cell("F" + r, msg, style));
                 sheet.Append("</row>");
             }
             sheet.Append("</sheetData></worksheet>");
@@ -309,11 +314,15 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             return res;
         }
 
-        /// <summary>把某个日志通道的全部事件导出成 CSV（完整消息，不截断）。</summary>
-        private static void ExportLogCsv(Session s, string logName, string dir, string fileName, int days, string levels)
+        /// <summary>
+        /// 把某个日志通道的全部事件导出成带底色的 .xlsx（完整消息，不截断）。
+        /// PowerShell 先写成临时 CSV，再转成 xlsx，临时文件随即删掉。
+        /// </summary>
+        private static void ExportEventTable(Session s, string logName, string dir, string baseName, int days, string levels)
         {
-            string target = Path.Combine(dir, fileName);
-            string outPs = target.Replace("'", "''");
+            string tmpCsv = Path.Combine(dir, baseName + ".csv");
+            string xlsx = Path.Combine(dir, baseName + ".xlsx");
+            string outPs = tmpCsv.Replace("'", "''");
             string levelPart = string.IsNullOrEmpty(levels) ? "" : ("; Level=" + levels);
             string script = @"
 $out = '" + outPs + @"'
@@ -328,14 +337,9 @@ if($ev){
         else { '' }
       }},
                   @{n='TimeCreated';e={$_.TimeCreated.ToString('yyyy-MM-dd HH:mm:ss')}},
-                  @{n='LogName';e={$_.LogName}},
                   @{n='EventID';e={$_.Id}},
                   @{n='Level';e={$_.LevelDisplayName}},
                   @{n='Provider';e={$_.ProviderName}},
-                  @{n='Task';e={$_.TaskDisplayName}},
-                  @{n='RecordId';e={$_.RecordId}},
-                  @{n='User';e={$_.UserId}},
-                  @{n='Computer';e={$_.MachineName}},
                   @{n='Data';e={ (@($_.Properties) | ForEach-Object { ([string]$_.Value) -replace ""[`r`n]+"", ' ' }) -join ' | ' }},
                   @{n='Message';e={ ([string]$_.Message) -replace ""[`r`n]+"",' ' }} |
     Export-Csv -Path $out -NoTypeInformation -Encoding UTF8
@@ -351,16 +355,22 @@ if($ev){
                 string l = line.Trim();
                 if (l.StartsWith("rows=")) rows = l.Substring(5);
             }
-            if (File.Exists(target))
+
+            if (File.Exists(tmpCsv))
             {
-                long size = new FileInfo(target).Length;
-                try { WriteEventXlsx(target, Path.ChangeExtension(target, ".xlsx")); } catch { }
-                s.Log("  · " + fileName + ": " + rows + " event(s), " + Tool.FmtSize(size));
-                if (size < 100) File.Delete(target);
+                try { WriteEventXlsx(tmpCsv, xlsx); }
+                finally { try { File.Delete(tmpCsv); } catch { } }
+            }
+
+            if (File.Exists(xlsx))
+            {
+                long size = new FileInfo(xlsx).Length;
+                if (size < 200) { try { File.Delete(xlsx); } catch { } }
+                else s.Log("  · " + baseName + ".xlsx: " + rows + " event(s), " + Tool.FmtSize(size));
             }
             else
             {
-                s.Log("  · " + fileName + ": no events in the last " + days + " days");
+                s.Log("  · " + baseName + ": no events in the last " + days + " days");
             }
         }
 
@@ -545,8 +555,8 @@ $ev | Sort-Object TimeCreated -Descending | ForEach-Object {
             string outp = Tool.Ps(script, 180000, s.Token);
             ParseEvents(outp, "Application", s);
 
-            ExportLogCsv(s, "Application", dir, "Application_events.csv", 30, null);
-            ExportLogCsv(s, "Application", dir, "Application_errors.csv", 30, "1,2,3");
+            ExportEventTable(s, "Application", dir, "Application_events", 30, null);
+            ExportEventTable(s, "Application", dir, "Application_errors", 30, "1,2,3");
         }
 
         public static void SysInfo(Session s)

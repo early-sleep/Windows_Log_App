@@ -254,7 +254,7 @@ namespace LogCollector
 
     static class Program
     {
-        public const string Version = "3.6";
+        public const string Version = "3.7";
 
         [STAThread]
         static int Main(string[] args)

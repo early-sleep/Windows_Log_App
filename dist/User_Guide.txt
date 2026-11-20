@@ -1,4 +1,4 @@
-Laptop Log Collector  v3.10
+Laptop Log Collector  v3.11
 ======================================================================
 
 1. What this is

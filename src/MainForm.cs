@@ -17,6 +17,8 @@ namespace LogCollector
         private static readonly Color Line = Color.FromArgb(224, 228, 236);
 
         private Dictionary<string, CheckBox> _checks = new Dictionary<string, CheckBox>();
+        private Dictionary<string, bool> _sel = new Dictionary<string, bool>();   // 勾选状态，和控件解耦
+        private Panel _jobsPanel;
         private List<JobDef> _defs;
         private TextBox _txtOperator, _txtOut;
         private AnalyzerPanel _analyzer;
@@ -36,6 +38,7 @@ namespace LogCollector
         public MainForm()
         {
             _defs = Catalog.All();
+            foreach (JobDef d in _defs) _sel[d.Id] = d.DefaultOn;   // 默认全选（折叠起来的大类也算）
             BuildUi();
             LoadMachineInfo();
             try
@@ -177,6 +180,7 @@ namespace LogCollector
             quick.Controls.Add(_txtOperator);
             left.Controls.Add(quick);
             _quickBar = quick;
+            _jobsPanel = left;
             y = 36;
 
             _cats.Clear();
@@ -368,15 +372,21 @@ namespace LogCollector
 
                 foreach (JobDef d in items)
                 {
+                    bool on;
+                    if (!_sel.TryGetValue(d.Id, out on)) on = d.DefaultOn;
+
                     CheckBox cb = new CheckBox();
                     cb.Text = Width2(Runner.NumOf(d.Id).ToString()) + "  " + d.Name;
-                    cb.Checked = d.DefaultOn;
+                    cb.Checked = on;
                     cb.AutoSize = true;
                     cb.Font = new Font("Microsoft YaHei UI", 9F);
                     cb.ForeColor = Color.FromArgb(33, 41, 54);
                     cb.Location = new Point(30, y);
                     left.Controls.Add(cb);
                     _checks[d.Id] = cb;
+
+                    string jid = d.Id;
+                    cb.CheckedChanged += delegate { _sel[jid] = cb.Checked; };
 
                     Label h = new Label();
                     h.Text = d.Hint;
@@ -472,16 +482,14 @@ namespace LogCollector
 
         private void SetAll(bool on)
         {
-            foreach (CheckBox cb in _checks.Values) cb.Checked = on;
+            foreach (JobDef d in _defs) _sel[d.Id] = on;
+            if (_jobsPanel != null) RenderJobs(_jobsPanel);
         }
 
         private void ResetDefault()
         {
-            foreach (JobDef d in _defs)
-            {
-                CheckBox cb;
-                if (_checks.TryGetValue(d.Id, out cb)) cb.Checked = d.DefaultOn;
-            }
+            foreach (JobDef d in _defs) _sel[d.Id] = d.DefaultOn;
+            if (_jobsPanel != null) RenderJobs(_jobsPanel);
         }
 
         // ------------------------------------------------------------ state
@@ -578,8 +586,8 @@ namespace LogCollector
             List<JobDef> picked = new List<JobDef>();
             foreach (JobDef d in _defs)
             {
-                CheckBox cb;
-                if (_checks.TryGetValue(d.Id, out cb) && cb.Checked) picked.Add(d);
+                bool on;
+                if (_sel.TryGetValue(d.Id, out on) && on) picked.Add(d);
             }
             if (picked.Count == 0)
             {
